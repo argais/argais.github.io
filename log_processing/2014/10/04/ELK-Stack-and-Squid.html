@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>ELK (Elasticsearch, Logstash and Kibana) Stack and Squid</title>
+  <meta name="description" content="...linux, python, cloud computing, cooking, music...
+" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="http://127.0.0.1:4000/log_processing/2014/10/04/ELK-Stack-and-Squid.html">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+<a href="http://127.0.0.1:4000" class="logo-readium"><span class="logo" style="background-image: url(/assets/images/fb_logo.png)"></span></a>
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="noarticleimage">
+          <div class="post-meta">
+            <h1 class="post-title">ELK (Elasticsearch, Logstash and Kibana) Stack and Squid</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/avatar.png)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person"></h4>
+              on
+              <time datetime="2014-10-04T21:00:00-03:00">04 Oct 2014</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+          </div>
+        </div>
+        <br>
+        <br>
+        <br>
+        
+        <section class="post-content">
+          <div class="post-reading">
+            <span class="post-reading-time"></span> read
+          </div>
+          <a name="topofpage"></a>
+          <h1 id="intro">Intro</h1>
+
+<p>Squid, the mean guy all users hate.
+Personally, as an admin, I hate it too, but its a necessary evil.</p>
+
+<p>Now, checking its logs is hell, whoever devised that timestamp surelly is a mean person :(</p>
+
+<p>In time I will make a decent squid monitoring solution, its one of my professional goals, but for now I want a better way to look at those logs.</p>
+
+<p>I also want to have centralized logging and an easy way to look at those, and that brings me to the perfect excuse to go fiddle with the <a href="www.elasticsearch.org">ELK stack</a> (Elasticsearch, Logstash, Kibana)!</p>
+
+<p>So how does this work?</p>
+
+<p>The ELK stack is composed of three components</p>
+
+<ul>
+  <li><strong>E</strong>lasticsearch</li>
+  <li><strong>L</strong>ogstash</li>
+  <li><strong>K</strong>ibana</li>
+</ul>
+
+<p>Logstash receives, and treats our logs into some format we can run a query on, it forwards them to elasticsearch (that actually stores our logs) and then we use kibana to actually run the searchs and make neat dashboards.</p>
+
+<p>On this post I’ll get the stack working, on a next post I’ll have it receiving squid logs.</p>
+
+<h1 id="so-lets-get-our-hands-dirty">So lets get our hands dirty.</h1>
+
+<p>I am using an ubuntu 12.04 server (ya, 14.04 is out I know…) and I’ll be following a <a href="https://www.digitalocean.com/community/tutorials/how-to-use-logstash-and-kibana-to-centralize-and-visualize-logs-on-ubuntu-14-04">guide from the awesome people at Digital Ocean</a>. I absolutely recomend people to read this link, I am basing my lil guide on it, but changing things to make more sense to me here and there.</p>
+
+<h1 id="get-your-java">Get your java</h1>
+
+<p><strong>Use sudo wherever its needed</strong>, I am doing all this as root, because I’m fidling with a test environment, be a good admin and use sudo on production servers.</p>
+
+<pre><code>add-apt-repository -y ppa:webupd8team/java
+apt-get update
+apt-get -y install oracle-java7-installer
+</code></pre>
+
+<h1 id="add-elasticity-to-your-search">Add elasticity to your search</h1>
+
+<p>Get it done!</p>
+
+<pre><code>wget -O - http://packages.elasticsearch.org/GPG-KEY-elasticsearch |  apt-key add -
+echo 'deb http://packages.elasticsearch.org/elasticsearch/1.1/debian stable main' | tee /etc/apt/sources.list.d/elasticsearch.list
+apt-get update
+apt-get -y install elasticsearch=1.1.1
+</code></pre>
+
+<p>With that done lets edit elasticsearch’s configuration file</p>
+
+<pre><code>vi /etc/elasticsearch/elasticsearch.yml
+</code></pre>
+
+<p>We will change two lines, one to disable dynamic scripts, and the second to restrict access to our elasticsearch instance to localhost only, so people can’t shutdown our shinny new toy using the HTTP API.</p>
+
+<p>So, add this line:</p>
+
+<pre><code>script.disable_dynamic: true
+</code></pre>
+
+<p>Then uncomment and edit this one (comes with 192.168.0.1 instead of localhost):</p>
+
+<pre><code>network.host: localhost
+</code></pre>
+
+<p>(markdown is awesome, so easy to write blog posts these days…)</p>
+
+<p>Save the file and start elasticsearch.</p>
+
+<pre><code>service elasticsearch restart
+</code></pre>
+
+<p>Lets have it up on boot (doing as the installer tells us)</p>
+
+<pre><code>update-rc.d elasticsearch defaults 95 10 
+</code></pre>
+
+<p>Woot! our searchs are elastic now (yup, I’m in a dad joke/pun mood today)</p>
+
+<h1 id="rev-up-your-nginx">Rev up your Ngin…X</h1>
+
+<p>Kibana sits on a webserver, my test box has none installed, I love nginx, and the original guide on Digital Ocean uses it too, so lets go with it.</p>
+
+<pre><code>apt-get install nginx
+</code></pre>
+
+<p>Damn this was hard. Kibana connects to Elasticsearch on port 9200, we connect to the webserver on port 80, nginx needs to proxy the requests from 80 -&gt; 9200.</p>
+
+<p>If you’re familiar with nginx this should be trivial, but since the Kibana guys are so nice we will get a sample config from their github repo.</p>
+
+<p>Get into a temp folder and download it.</p>
+
+<pre><code>wget https://github.com/elasticsearch/kibana/raw/master/sample/nginx.conf
+</code></pre>
+
+<p>Edit it</p>
+
+<pre><code>vi nginx.conf
+</code></pre>
+
+<p>Lets change the following lines to look like this</p>
+
+<pre><code>server_name localhost;
+root /usr/share/nginx/kibana;
+</code></pre>
+
+<p>Save it, and lets overwrite the default nginx</p>
+
+<pre><code>cp nginx.conf /etc/nginx/sites-available/default
+</code></pre>
+
+<p>Restart nginx</p>
+
+<pre><code>service nginx restart
+</code></pre>
+
+<h1 id="install-kibana-failed-to-think-of-a-crappy-pun">Install Kibana (failed to think of a crappy pun)</h1>
+
+<p>Get into a temp folder and download Kibana, then unpack the file.</p>
+
+<pre><code>wget https://download.elasticsearch.org/kibana/kibana/kibana-3.0.1.tar.gz
+tar zxvf kibana-3.0.1.tar.gz
+</code></pre>
+
+<p>Edit its configuration</p>
+
+<pre><code>vi kibana-3.0.1/config.js
+</code></pre>
+
+<p>In the elasticsearch line change it to use port 80 (from 9200).</p>
+
+<pre><code>elasticsearch: "http://"+window.location.hostname+":80",
+</code></pre>
+
+<p>Lets rename and move our folder to the place we previously specified in the nginx conf file.</p>
+
+<pre><code>mv kibana-3.0.1 kibana
+mv kibana /usr/share/nginx/
+</code></pre>
+
+<p>Now you should be able to see your kibana interface when trying to access http://your_server_ip/.</p>
+
+<p>If all went well you should be greeted by this nice interface.</p>
+
+<p><img src="http://127.0.0.1:4000/assets/article_images/2014-10-05-ELK-Stack-and-Squid/kibana.png" alt="" /></p>
+
+<p>I am not setting up any kind of login screen at this time, we will get to it at the end of this guide (gotta get things working first :D)</p>
+
+<h1 id="certificates">Certificates</h1>
+
+<p>We will be using Logstash Forwarder to send the logs from our servers to the logstash server, so we will need to create some certificates (yay -_-) those will be used by the forwarder to verify the identity of the logstash server, I like to think of certificates as photo ids :D.</p>
+
+<p>Lets make the folders to store the certs and create then in the correct place.</p>
+
+<pre><code>mkdir -p /etc/pki/tls/certs
+mkdir /etc/pki/tls/private
+cd /etc/pki/tls
+openssl req -x509 -batch -nodes -days 3650 -newkey rsa:2048 -keyout private/logstash-forwarder.key -out certs/logstash-forwarder.crt
+</code></pre>
+
+<p>Later we will copy this cert to all the servers that send logs to logstash.</p>
+
+<h1 id="a-stash-for-our-logs">A stash for our logs</h1>
+
+<p>Installing logstash is mad easy, so get it done</p>
+
+<pre><code>echo 'deb http://packages.elasticsearch.org/logstash/1.4/debian stable main' | tee /etc/apt/sources.list.d/logstash.list
+apt-get update
+apt-get install logstash=1.4.2-1-2c0f5a1
+</code></pre>
+
+<p>Ok, its installed, now to configure it.</p>
+
+<p>So, logstash conf files are separated in inputs, filters and outputs.</p>
+
+<p>Inputs will describe how the server will receive the logs.
+Filters will get your cryptic log lines and change into something you can search later.
+Output will describe where the filtered info will be sent to.</p>
+
+<p>Let’s go ahead and setup a lumberjack input, lumberjack is the protocol logstash forwarder uses.</p>
+
+<pre><code>vi /etc/logstash/conf.d/01-lumberjack-input.conf
+</code></pre>
+
+<p>Then insert this configuration:</p>
+
+<pre><code>input {
+  lumberjack {
+    port =&gt; 5000
+    type =&gt; "logs"
+    ssl_certificate =&gt; "/etc/pki/tls/certs/logstash-forwarder.crt"
+    ssl_key =&gt; "/etc/pki/tls/private/logstash-forwarder.key"
+  }
+}
+</code></pre>
+
+<p>What is this doing? the file says it all, we are setting up a lumberjack input in port 5000(tcp), and it will use the ssl cert we created before.</p>
+
+<p>Now lets create a new file where we will add a filter for syslog messages (syslog, the megalogfile :P).</p>
+
+<pre><code>vi /etc/logstash/conf.d/10-syslog.conf
+</code></pre>
+
+<p>Insert this filter conf:</p>
+
+<pre><code>filter {
+  if [type] == "syslog" {
+    grok {
+      match =&gt; { "message" =&gt; "%{SYSLOGTIMESTAMP:syslog_timestamp} %{SYSLOGHOST:syslog_hostname} %{DATA:syslog_program}(?:\[%{POSINT:syslog_pid}\])?: %{GREEDYDATA:syslog_message}" }
+      add_field =&gt; [ "received_at", "%{@timestamp}" ]
+      add_field =&gt; [ "received_from", "%{host}" ]
+    }
+    syslog_pri { }
+    date {
+      match =&gt; [ "syslog_timestamp", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
+    }
+  }
+}
+</code></pre>
+
+<p>So, this says that it will filter logs that have been labeled as “syslog” type by logstash forwarder, and it will use grok to parse it into something we can search on later.</p>
+
+<p>Now the output, once again we create a new file.</p>
+
+<pre><code>vi /etc/logstash/conf.d/30-lumberjack-output.conf
+</code></pre>
+
+<p>Then we put this in:</p>
+
+<pre><code>output {
+  elasticsearch { host =&gt; localhost }
+  stdout { codec =&gt; rubydebug }
+}
+</code></pre>
+
+<p>This tells logstash to store the logs in elasticsearch.</p>
+
+<blockquote>
+  <p>If you want to setup more filters, be sure to have the conf files named between input and output ( between our 01 and 30 files ).</p>
+</blockquote>
+
+<p>Restart it and…</p>
+
+<pre><code>service logstash restart
+</code></pre>
+
+<p>TADA! Its working.</p>
+
+<p>Now what?</p>
+
+<p>Now we gotta ship these logs from the servers to logstash, meaning we gotta setup logstash forwarder.</p>
+
+<h1 id="ship-those-logs">Ship those logs!!!</h1>
+
+<p>First of all, remember those ssl certs we created? Yup, gotta copy them to the servers you will have logs shipped to logstash.</p>
+
+<p>So I like to think I’m a smart guy (not really :P) and made a simple script (you could do this on puppet if you are actually smart ;). Remember that I’m working in a test lab, and I’m mostly interested in getting it running to check out how it works.</p>
+
+<blockquote>
+  <p>When you work in production be smarter and use something like puppet to deploy this, and dont use root for everything like I’m doing, <strong>sudo exists for a reason</strong>.</p>
+</blockquote>
+
+<pre><code>#!/bin/bash
+mkdir -p /etc/pki/tls/certs
+scp root@my_logstash_server:/etc/pki/tls/certs/logstash-forwarder.crt /etc/pki/tls/certs
+echo 'deb http://packages.elasticsearch.org/logstashforwarder/debian stable main' | tee /etc/apt/sources.list.d/logstashforwarder.list
+apt-get update
+apt-get install logstash-forwarder
+cd /etc/init.d/
+wget https://raw.github.com/elasticsearch/logstash-forwarder/master/logstash-forwarder.init -O logstash-forwarder
+chmod +x logstash-forwarder
+update-rc.d logstash-forwarder defaults
+</code></pre>
+
+<p>There it is! Installed, now lets configure it.</p>
+
+<pre><code>vi /etc/logstash-forwarder
+</code></pre>
+
+<p>Now insert the following lines, replace logstash_server with the ip/name of your logstash server.</p>
+
+<pre><code>{
+  "network": {
+    "servers": [ "logstash_server_private_IP:5000" ],
+    "timeout": 15,
+    "ssl ca": "/etc/pki/tls/certs/logstash-forwarder.crt"
+  },
+  "files": [
+    {
+      "paths": [
+        "/var/log/syslog",
+        "/var/log/auth.log"
+       ],
+      "fields": { "type": "syslog" }
+    }
+   ]
+}
+</code></pre>
+
+<p>So, this tells the forwarder to connect on our logstash server on port 5000 (remember our server input config?), using the ssl cert.
+The paths tell which logfiles to send, in this case syslog and auth.log, and the type label (remember our filter conf?).</p>
+
+<blockquote>
+  <p>If you had something like a squid server we could send the squid log files, and label then with type: somethingelse.</p>
+</blockquote>
+
+<p>Restart it now:</p>
+
+<pre><code>service logstash-forwarder restart
+</code></pre>
+
+<p>Now it is sending logs to the server.</p>
+
+<h1 id="lets-use-our-new-toy">Lets use our new toy!</h1>
+
+<p>Now that you repeated that on all the servers you want to monitor, jump to kibana (http://logstash_server_ip).</p>
+
+<p>There’s a link to a premade logstash dashboard.</p>
+
+<p>Now you should have some data popping in, use the query field to search for stuff like a username (to see if someone is hammering a username to bruteforce their way into the server), also fiddle around with the graph functions, have fun ;)</p>
+
+<p><img src="http://127.0.0.1:4000/assets/article_images/2014-10-05-ELK-Stack-and-Squid/kibana-working.png" alt="" /></p>
+
+<h1 id="extra-safe">Extra safe?</h1>
+
+<p>Since kibana doesnt have any kind of authentication, we can put a login/pass at the webserver.</p>
+
+<pre><code>apt-get install apache2-utils
+htpasswd -c /etc/nginx/conf.d/kibana.myhost.org.htpasswd username
+</code></pre>
+
+<p>Then enter and verify the password, worry not, this file is already referenced in the nginx install we did before.
+Restart nginx to apply</p>
+
+<pre><code>service nginx restart
+</code></pre>
+
+<p>Thats all for now, I’ll be fidling with squid logs soon and I’ll write another guide for it.</p>
+
+<blockquote>
+  <p>Kudos to <a href="https://www.digitalocean.com/community/users/manicas">Mitchell Anicas</a> for the awesome guide I based this post on. By no means I claim to have done it all myself, I just rewrote it in a way thats easier for me.</p>
+</blockquote>
+
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=ELK+%28Elasticsearch%2C+Logstash+and+Kibana%29+Stack+and+Squid&amp;url=http://127.0.0.1:4000/log_processing/2014/10/04/ELK-Stack-and-Squid"
+                  onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/avatar.png)">Blog Logo</div>
+              <h4>Fernando Battistella</h4>
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2014-10-04 21:00">04 Oct 2014</time></p>
+            </section>
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Fernando Battistella</a> &copy; 2015<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/assets/images/banner.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">Linuxaria Gourmet</h1>
+        <h2 class="blog-description">...linux, python, cloud computing, cooking, music...
+</h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>

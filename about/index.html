@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>About Me</title>
+  <meta name="description" content="...linux, python, cloud computing, cooking, music...
+" />
+
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="http://127.0.0.1:4000/about/">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+</head>
+
+  <body itemscope itemtype="http://schema.org/Article">
+    <!-- header start -->
+
+<a href="http://127.0.0.1:4000" class="logo-readium"><span class="logo" style="background-image: url(/assets/images/fb_logo.png)"></span></a>
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="noarticleimage">
+          <div class="post-meta">
+            <h1 class="post-title">About Me</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url()">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person"></h4>
+            </div>
+          </div>
+        </div>
+        <br>
+        <br>
+        <br>
+        
+        <section class="post-content">
+          <a name="topofpage"></a>
+          
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="c">#!/usr/bin/python</span>
+<span class="kn">from</span> <span class="nn">me</span> <span class="kn">import</span> <span class="n">description</span></code></pre></div>
+
+<p>I’m someone that enjoys the technical aspects of IT and loves to get things working.</p>
+
+<p>I really enjoy solving the puzzle, be it going from an idea to a finished new product, fixing/upgrading an entire company’s infrastructure or learning new tools to get the job done.</p>
+
+<p>I am a bondable person that has no problems working by myself or in a team.</p>
+
+<p>I’ve lived a couple years in Canada and I can’t wait to go back!! (hint hint!! looking for jobs in Canada :D)</p>
+
+<p><strong>That’s me!</strong></p>
+
+<p>Besides IT work, I’ve led worship teams in community churchs, love cooking and photography and enjoy a good chat.</p>
+
+<p>Recently I’ve been diving into everything python and aws ec2, fiddling with foreman/puppet (automation, gotta love it) and been cooking like crazy (asian and italian food, yum!).</p>
+
+<h3 id="my-cv">My CV</h3>
+
+<p>The most recent version of my CV is my linkedIn profile, <a href="https://br.linkedin.com/in/battistella">check it out</a>!</p>
+
+<h3 id="talk-to-me">Talk to me!</h3>
+
+<ul>
+  <li><a href="&#109;&#097;&#105;&#108;&#116;&#111;:&#102;&#101;&#114;&#110;&#097;&#110;&#100;&#111;&#064;&#102;&#101;&#114;&#110;&#097;&#110;&#100;&#111;&#098;&#097;&#116;&#116;&#105;&#115;&#116;&#101;&#108;&#108;&#097;&#046;&#099;&#111;&#109;&#046;&#098;&#114;">&#102;&#101;&#114;&#110;&#097;&#110;&#100;&#111;&#064;&#102;&#101;&#114;&#110;&#097;&#110;&#100;&#111;&#098;&#097;&#116;&#116;&#105;&#115;&#116;&#101;&#108;&#108;&#097;&#046;&#099;&#111;&#109;&#046;&#098;&#114;</a></li>
+  <li>Phone - +55 41 9208-0046</li>
+</ul>
+
+
+        </section>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image"  style="background-image: url(/assets/images/banner.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">Linuxaria Gourmet</h1>
+        <h2 class="blog-description">...linux, python, cloud computing, cooking, music...
+</h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+  </body>
+</html>
