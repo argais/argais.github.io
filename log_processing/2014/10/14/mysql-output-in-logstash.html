@@ -1,6 +1,6 @@
-<!DOCTYPE html>
-<html>
-  <head>
+
+
+  
   <meta charset="utf-8">
   <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,10 +9,10 @@
 
   <title>MySQL Output in Logstash</title>
   <meta name="description" content="...linux, python, cloud computing, cooking, music...
-" />
+">
 
-  <meta name="HandheldFriendly" content="True" />
-  <meta name="MobileOptimized" content="320" />
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -23,11 +23,11 @@
   <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
   <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
 
-  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
-  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
-</head>
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css">
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css">
 
-  <body itemscope itemtype="http://schema.org/Article">
+
+  
     <!-- header start -->
 
 <a href="/" class="logo-readium"><span class="logo" style="background-image: url(/assets/images/fb_logo.png)"></span></a>
@@ -90,7 +90,7 @@
 
 <p>Here is the sql to create what we will be using on this guide.</p>
 
-<div class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="lineno"> 1</span> <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">squid</span><span class="p">;</span>
+<figure class="highlight"><pre><code class="language-sql" data-lang="sql"><span class="lineno"> 1</span> <span class="k">CREATE</span> <span class="k">DATABASE</span> <span class="n">squid</span><span class="p">;</span>
 <span class="lineno"> 2</span> <span class="k">CREATE</span> <span class="k">TABLE</span> <span class="o">`</span><span class="n">squid</span><span class="o">`</span><span class="p">.</span><span class="o">`</span><span class="n">new_table</span><span class="o">`</span> <span class="p">(</span>
 <span class="lineno"> 3</span>   <span class="o">`</span><span class="n">id</span><span class="o">`</span> <span class="nb">INT</span> <span class="k">NOT</span> <span class="k">NULL</span> <span class="n">AUTO_INCREMENT</span><span class="p">,</span>
 <span class="lineno"> 4</span>   <span class="o">`</span><span class="k">user</span><span class="o">`</span> <span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">45</span><span class="p">)</span> <span class="k">NULL</span><span class="p">,</span>
@@ -99,21 +99,21 @@
 <span class="lineno"> 7</span>   <span class="o">`</span><span class="n">source_ip</span><span class="o">`</span> <span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">15</span><span class="p">)</span> <span class="k">NULL</span><span class="p">,</span>
 <span class="lineno"> 8</span>   <span class="o">`</span><span class="n">response_size</span><span class="o">`</span> <span class="nb">BIGINT</span> <span class="k">NULL</span><span class="p">,</span>
 <span class="lineno"> 9</span>   <span class="o">`</span><span class="nb">date</span><span class="o">`</span> <span class="n">DATETIME</span> <span class="k">NULL</span><span class="p">,</span>
-<span class="lineno">10</span>   <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">));</span></code></pre></div>
+<span class="lineno">10</span>   <span class="k">PRIMARY</span> <span class="k">KEY</span> <span class="p">(</span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="p">));</span></code></pre></figure>
 
 <h1 id="lets-get-it-done">Lets get it done!</h1>
 
 <p>First things first, lets make an output filter on logstash, to send our logs as json to our app. So, like in the previous posts, create a new file in <code>/etc/logstash/conf.d/</code> with the following content:</p>
 
-<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="lineno">1</span> <span class="n">output</span> <span class="p">{</span>
-<span class="lineno">2</span>     <span class="k">if</span> <span class="p">[</span><span class="nb">type</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;squid&quot;</span> <span class="p">{</span>
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="lineno">1</span> <span class="n">output</span> <span class="p">{</span>
+<span class="lineno">2</span>     <span class="k">if</span> <span class="p">[</span><span class="nb">type</span><span class="p">]</span> <span class="o">==</span> <span class="s">"squid"</span> <span class="p">{</span>
 <span class="lineno">3</span> 	    <span class="n">http</span> <span class="p">{</span>
-<span class="lineno">4</span> 		    <span class="n">format</span> <span class="o">=&gt;</span> <span class="s">&quot;json&quot;</span>
-<span class="lineno">5</span> 		    <span class="n">http_method</span> <span class="o">=&gt;</span> <span class="s">&quot;post&quot;</span>
-<span class="lineno">6</span> 		    <span class="n">url</span> <span class="o">=&gt;</span> <span class="s">&quot;http://localhost:90/&quot;</span>
+<span class="lineno">4</span> 		    <span class="n">format</span> <span class="o">=&gt;</span> <span class="s">"json"</span>
+<span class="lineno">5</span> 		    <span class="n">http_method</span> <span class="o">=&gt;</span> <span class="s">"post"</span>
+<span class="lineno">6</span> 		    <span class="n">url</span> <span class="o">=&gt;</span> <span class="s">"http://localhost:90/"</span>
 <span class="lineno">7</span> 	  <span class="p">}</span>
 <span class="lineno">8</span>     <span class="p">}</span>
-<span class="lineno">9</span> <span class="p">}</span></code></pre></div>
+<span class="lineno">9</span> <span class="p">}</span></code></pre></figure>
 
 <p>This is like saying, “if the type is squid, send all the stuff as json using post to http://localhost:90”. We will be running our Flask App on port 90.</p>
 
@@ -127,7 +127,7 @@
 
 <p>Ok, now that this stuff is installed, lets get our app running, create a new file for our app.</p>
 
-<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="lineno"> 1</span> <span class="c"># import the modules we will be using</span>
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="lineno"> 1</span> <span class="c"># import the modules we will be using</span>
 <span class="lineno"> 2</span> <span class="kn">import</span> <span class="nn">MySQLdb</span> <span class="kn">as</span> <span class="nn">mysql</span>
 <span class="lineno"> 3</span> <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
 <span class="lineno"> 4</span> <span class="kn">import</span> <span class="nn">json</span>
@@ -135,30 +135,30 @@
 <span class="lineno"> 6</span> <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
 <span class="lineno"> 7</span> 
 <span class="lineno"> 8</span> <span class="c"># when we get a POST or PUT on / do this...</span>
-<span class="lineno"> 9</span> <span class="nd">@app.route</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;PUT&quot;</span><span class="p">,</span> <span class="s">&quot;POST&quot;</span><span class="p">])</span>
+<span class="lineno"> 9</span> <span class="nd">@app.route</span><span class="p">(</span><span class="s">"/"</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s">"PUT"</span><span class="p">,</span> <span class="s">"POST"</span><span class="p">])</span>
 <span class="lineno">10</span> <span class="k">def</span> <span class="nf">get_json_data</span><span class="p">():</span>
 <span class="lineno">11</span> 	<span class="c"># put the json data in a variable</span>
 <span class="lineno">12</span>     <span class="n">log_data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">(</span><span class="n">force</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 <span class="lineno">13</span> 
 <span class="lineno">14</span> 	<span class="c"># connect to mysql</span>
-<span class="lineno">15</span>     <span class="n">connection</span> <span class="o">=</span> <span class="n">mysql</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s">&#39;localhost&#39;</span><span class="p">,</span><span class="n">user</span><span class="o">=</span><span class="s">&#39;root&#39;</span><span class="p">,</span><span class="n">passwd</span><span class="o">=</span><span class="s">&#39;root&#39;</span><span class="p">,</span><span class="n">db</span><span class="o">=</span><span class="s">&#39;squid&#39;</span><span class="p">)</span>
+<span class="lineno">15</span>     <span class="n">connection</span> <span class="o">=</span> <span class="n">mysql</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s">'localhost'</span><span class="p">,</span><span class="n">user</span><span class="o">=</span><span class="s">'root'</span><span class="p">,</span><span class="n">passwd</span><span class="o">=</span><span class="s">'root'</span><span class="p">,</span><span class="n">db</span><span class="o">=</span><span class="s">'squid'</span><span class="p">)</span>
 <span class="lineno">16</span>     <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
 <span class="lineno">17</span> 
 <span class="lineno">18</span> 	<span class="c"># get the values into variables, changing them to strings or ints whenever needed</span>
-<span class="lineno">19</span>     <span class="n">user</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">&#39;cache_user&#39;</span><span class="p">])</span>
-<span class="lineno">20</span>     <span class="n">destination_host</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">&#39;dst_host&#39;</span><span class="p">])</span>
+<span class="lineno">19</span>     <span class="n">user</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">'cache_user'</span><span class="p">])</span>
+<span class="lineno">20</span>     <span class="n">destination_host</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">'dst_host'</span><span class="p">])</span>
 <span class="lineno">21</span> 	<span class="c"># some requests dont have an uri_param field, but we still want them, so, if theres no uri_param key on the json data, make the variable empty</span>
-<span class="lineno">22</span> 	<span class="k">if</span> <span class="n">log_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;uri_param&#39;</span><span class="p">):</span>
-<span class="lineno">23</span>         <span class="n">uri_parameters</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">&#39;uri_param&#39;</span><span class="p">])</span>
+<span class="lineno">22</span> 	<span class="k">if</span> <span class="n">log_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">'uri_param'</span><span class="p">):</span>
+<span class="lineno">23</span>         <span class="n">uri_parameters</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">'uri_param'</span><span class="p">])</span>
 <span class="lineno">24</span>     <span class="k">else</span><span class="p">:</span>
-<span class="lineno">25</span>         <span class="n">uri_parameters</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
-<span class="lineno">26</span>     <span class="n">source_ip</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">&#39;src_ip&#39;</span><span class="p">])</span>
-<span class="lineno">27</span>     <span class="n">response_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">&#39;response_size&#39;</span><span class="p">])</span>
+<span class="lineno">25</span>         <span class="n">uri_parameters</span> <span class="o">=</span> <span class="s">''</span>
+<span class="lineno">26</span>     <span class="n">source_ip</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">'src_ip'</span><span class="p">])</span>
+<span class="lineno">27</span>     <span class="n">response_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">'response_size'</span><span class="p">])</span>
 <span class="lineno">28</span>     <span class="c"># format the timestamp data into a format that isnt a royal pain to work with</span>
-<span class="lineno">29</span> 	<span class="n">date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">&#39;timestamp&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&#39;%Y-%m-</span><span class="si">%d</span><span class="s"> %H:%M:%S&#39;</span><span class="p">)</span>
+<span class="lineno">29</span> 	<span class="n">date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">log_data</span><span class="p">[</span><span class="s">'timestamp'</span><span class="p">]))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">'%Y-%m-</span><span class="si">%d</span><span class="s"> %H:%M:%S'</span><span class="p">)</span>
 <span class="lineno">30</span> 
 <span class="lineno">31</span>     <span class="k">try</span><span class="p">:</span>
-<span class="lineno">32</span>         <span class="n">sql</span> <span class="o">=</span> <span class="s">&quot;INSERT INTO squid (user,destination_host,uri_parameters,source_ip,response_size,date) VALUES (&#39;</span><span class="si">%s</span><span class="s">&#39;,&#39;</span><span class="si">%s</span><span class="s">&#39;,&#39;</span><span class="si">%s</span><span class="s">&#39;,&#39;</span><span class="si">%s</span><span class="s">&#39;,</span><span class="si">%d</span><span class="s">,&#39;</span><span class="si">%s</span><span class="s">&#39;)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">destination_host</span><span class="p">,</span> <span class="n">uri_parameters</span><span class="p">,</span> <span class="n">source_ip</span><span class="p">,</span> <span class="n">response_size</span><span class="p">,</span> <span class="n">date</span><span class="p">)</span>
+<span class="lineno">32</span>         <span class="n">sql</span> <span class="o">=</span> <span class="s">"INSERT INTO squid (user,destination_host,uri_parameters,source_ip,response_size,date) VALUES ('</span><span class="si">%s</span><span class="s">','</span><span class="si">%s</span><span class="s">','</span><span class="si">%s</span><span class="s">','</span><span class="si">%s</span><span class="s">',</span><span class="si">%d</span><span class="s">,'</span><span class="si">%s</span><span class="s">')"</span> <span class="o">%</span> <span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">destination_host</span><span class="p">,</span> <span class="n">uri_parameters</span><span class="p">,</span> <span class="n">source_ip</span><span class="p">,</span> <span class="n">response_size</span><span class="p">,</span> <span class="n">date</span><span class="p">)</span>
 <span class="lineno">33</span> 		<span class="c"># insert the data in the database</span>
 <span class="lineno">34</span> 		<span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
 <span class="lineno">35</span>         <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
@@ -167,11 +167,11 @@
 <span class="lineno">38</span>         <span class="n">connection</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
 <span class="lineno">39</span> 
 <span class="lineno">40</span>     <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-<span class="lineno">41</span>     <span class="k">return</span> <span class="s">&quot;&quot;</span>
+<span class="lineno">41</span>     <span class="k">return</span> <span class="s">""</span>
 <span class="lineno">42</span> 
-<span class="lineno">43</span> <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="lineno">43</span> <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">"__main__"</span><span class="p">:</span>
 <span class="lineno">44</span> 	<span class="c"># run this on all interfaces and on port 90</span>
-<span class="lineno">45</span>     <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span><span class="n">port</span><span class="o">=</span><span class="mi">90</span><span class="p">)</span></code></pre></div>
+<span class="lineno">45</span>     <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s">'0.0.0.0'</span><span class="p">,</span><span class="n">port</span><span class="o">=</span><span class="mi">90</span><span class="p">)</span></code></pre></figure>
 
 <p>So what does it do? Well, basically, it opens a small webserver on port 90 that expects to receive a json formated input via post (that our logstash server will send).</p>
 
@@ -187,7 +187,7 @@
 
 <p><strong>TADA!</strong> Squid logs into mysql!</p>
 
-<h2 id="now-you-can-easily-search-group-and-make-reports-with-it">Now you can easily search, group and make reports with it!</h2>
+<p>##Now you can easily search, group and make reports with it!</p>
 
 <blockquote>
   <p>If you need more data from the logs you can add the fields on the database, and on the field vars and sql var, I am only collecting the bare minimum I need.</p>
@@ -198,8 +198,7 @@
           <section class="share">
             
               
-                <a class="icon-twitter" href="http://twitter.com/share?text=MySQL+Output+in+Logstash&amp;url=//log_processing/2014/10/14/mysql-output-in-logstash"
-                  onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <a class="icon-twitter" href="http://twitter.com/share?text=MySQL+Output+in+Logstash&amp;url=//log_processing/2014/10/14/mysql-output-in-logstash" onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
                 <i class="fa fa-twitter"></i><span class="hidden">twitter</span>
                 </a>
               
@@ -227,7 +226,7 @@
             <footer class="site-footer">
               <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
               <div class="inner">
-                <section class="copyright">All content copyright <a href="/">Fernando Battistella</a> &copy; 2015<br>All rights reserved.</section>
+                <section class="copyright">All content copyright <a href="/">Fernando Battistella</a> © 2016<br>All rights reserved.</section>
               </div>
             </footer>
           </div>
@@ -235,7 +234,7 @@
       </article>
     </main>
     <div class="bottom-closer">
-      <div class="background-closer-image"  style="background-image: url(/assets/images/banner.jpg)">
+      <div class="background-closer-image" style="background-image: url(/assets/images/banner.jpg)">
         Image
       </div>
       <div class="inner">
@@ -287,5 +286,5 @@
 </script>
 
 
-  </body>
-</html>
+  
+

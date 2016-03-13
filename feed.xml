@@ -6,9 +6,287 @@
 </description>
     <link>//</link>
     <atom:link href="//feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Mon, 27 Jul 2015 15:08:26 -0300</pubDate>
-    <lastBuildDate>Mon, 27 Jul 2015 15:08:26 -0300</lastBuildDate>
-    <generator>Jekyll v2.5.3</generator>
+    <pubDate>Sun, 13 Mar 2016 16:56:43 -0300</pubDate>
+    <lastBuildDate>Sun, 13 Mar 2016 16:56:43 -0300</lastBuildDate>
+    <generator>Jekyll v3.1.2</generator>
+    
+      <item>
+        <title>Cloudtrail -&gt; S3 -&gt; Lambda -&gt; Elasticsearch Service</title>
+        <description>&lt;h1 id=&quot;cloudtrail---s3---lambda---elasticsearch-service&quot;&gt;Cloudtrail -&amp;gt; S3 -&amp;gt; Lambda -&amp;gt; Elasticsearch Service&lt;/h1&gt;
+
+&lt;p&gt;Cloudtrail, we all need it, and hey, its fairly easy to check stuff on the console.&lt;/p&gt;
+
+&lt;p&gt;Now, if you have multiple AWS accounts, it starts to get hairy, nobody wants to keep jumping over account consoles for that right?&lt;/p&gt;
+
+&lt;p&gt;CLI magic is good, but sometimes, we just want something easy to use, or we want to correlate that data with something else. The usual path would be to setup an ELK stack and be done with it, its simple, it works, but its one more thing to manage.&lt;/p&gt;
+
+&lt;p&gt;AWS now has Elasticsearch as a service, so the E part of the stack is covered, Kibana comes with it, there goes our K, so we’re only missing an L now.&lt;/p&gt;
+
+&lt;p&gt;Cloudtrail logs are stored on S3, now we just need some way to get those logs into Elasticsearch.&lt;/p&gt;
+
+&lt;h2 id=&quot;enter-lambda--s3-events&quot;&gt;Enter Lambda + S3 events!&lt;/h2&gt;
+
+&lt;p&gt;We can setup an S3 a trigger, so whenever a file is put on our bucket we get a call to a lambda function.
+That gives us a completely serverless solution for this issue, sweet huh?!&lt;/p&gt;
+
+&lt;p&gt;So our todo list is:
+1- provision an AWS Elasticsearch Service cluster
+2- create a Lambda function that receives S3 events, gets the bucket and sends the json info into Elasticsearch
+3- set the S3 event to trigger the lambda function
+4- get some dashboard action!&lt;/p&gt;
+
+&lt;h2 id=&quot;warnings-and-requirements&quot;&gt;Warnings and Requirements&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;I’m assuming at least a basic level of AWS expertise here (how to use the consoles, and click on buttons!), that said, https://docs.aws.amazon.com is an awesome resource ;)&lt;/li&gt;
+  &lt;li&gt;I’m also assuming that you already set up cloudtrail and it is saving logs into a s3 bucket just fine.&lt;/li&gt;
+  &lt;li&gt;This is a basic how-to, all open security (every time you run all open in production a kitten dies! think of the kittens!), read the docs on lambda, s3, elasticsearch and go with the good old least privilege rule.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;elaaaaaaaaaaaaaaaaaaaaaaaastic-search&quot;&gt;Elaaaaaaaaaaaaaaaaaaaaaaaastic Search&lt;/h2&gt;
+
+&lt;p&gt;There’s plenty of posts on the internet about sharding and replication and stuff on Elasticsearch, so I’ll keep this short.&lt;/p&gt;
+
+&lt;p&gt;If this is important to you, get two servers at least, and replicate between regions.
+For this post we will keep this simple, just launch a single server in your cluster, even a t2 instance should be ok, in prod, with a couple accounts, I’m using a pair m3.medium nodes (for 90 really active aws accounts). YMMV.&lt;/p&gt;
+
+&lt;p&gt;Keep note of your endpoint url, for your lambda function, and your kibana url, for.. well.. accessing kibana of course :)&lt;/p&gt;
+
+&lt;p&gt;Now lets add a template for our indexes, so Kibana doesnt cry a river later about analysed fields.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;PUT /_template/logstash
+{
+  &quot;template&quot; : &quot;logstash-*&quot;,
+  &quot;settings&quot; : {
+    &quot;index.refresh_interval&quot; : &quot;5s&quot;
+  },
+  &quot;mappings&quot; : {
+    &quot;_default_&quot; : {
+      &quot;_all&quot; : {&quot;enabled&quot; : true, &quot;omit_norms&quot; : true},
+      &quot;dynamic_templates&quot; : [ {
+        &quot;message_field&quot; : {
+          &quot;match&quot; : &quot;message&quot;,
+          &quot;match_mapping_type&quot; : &quot;string&quot;,
+          &quot;mapping&quot; : {
+            &quot;type&quot; : &quot;string&quot;, &quot;index&quot; : &quot;analyzed&quot;, &quot;omit_norms&quot; : true,
+            &quot;fielddata&quot; : { &quot;format&quot; : &quot;enabled&quot; }
+          }
+        }
+      }, {
+        &quot;string_fields&quot; : {
+          &quot;match&quot; : &quot;*&quot;,
+          &quot;match_mapping_type&quot; : &quot;string&quot;,
+          &quot;mapping&quot; : {
+            &quot;type&quot; : &quot;string&quot;, &quot;index&quot; : &quot;analyzed&quot;, &quot;omit_norms&quot; : true,
+            &quot;fielddata&quot; : { &quot;format&quot; : &quot;enabled&quot; },
+            &quot;fields&quot; : {
+              &quot;raw&quot; : {&quot;type&quot;: &quot;string&quot;, &quot;index&quot; : &quot;not_analyzed&quot;, &quot;doc_values&quot; : true, &quot;ignore_above&quot; : 256}
+            }
+          }
+        }
+      }, {
+        &quot;float_fields&quot; : {
+          &quot;match&quot; : &quot;*&quot;,
+          &quot;match_mapping_type&quot; : &quot;float&quot;,
+          &quot;mapping&quot; : { &quot;type&quot; : &quot;float&quot;, &quot;doc_values&quot; : true }
+        }
+      }, {
+        &quot;double_fields&quot; : {
+          &quot;match&quot; : &quot;*&quot;,
+          &quot;match_mapping_type&quot; : &quot;double&quot;,
+          &quot;mapping&quot; : { &quot;type&quot; : &quot;double&quot;, &quot;doc_values&quot; : true }
+        }
+      }, {
+        &quot;byte_fields&quot; : {
+          &quot;match&quot; : &quot;*&quot;,
+          &quot;match_mapping_type&quot; : &quot;byte&quot;,
+          &quot;mapping&quot; : { &quot;type&quot; : &quot;byte&quot;, &quot;doc_values&quot; : true }
+        }
+      }, {
+        &quot;short_fields&quot; : {
+          &quot;match&quot; : &quot;*&quot;,
+          &quot;match_mapping_type&quot; : &quot;short&quot;,
+          &quot;mapping&quot; : { &quot;type&quot; : &quot;short&quot;, &quot;doc_values&quot; : true }
+        }
+      }, {
+        &quot;integer_fields&quot; : {
+          &quot;match&quot; : &quot;*&quot;,
+          &quot;match_mapping_type&quot; : &quot;integer&quot;,
+          &quot;mapping&quot; : { &quot;type&quot; : &quot;integer&quot;, &quot;doc_values&quot; : true }
+        }
+      }, {
+        &quot;long_fields&quot; : {
+          &quot;match&quot; : &quot;*&quot;,
+          &quot;match_mapping_type&quot; : &quot;long&quot;,
+          &quot;mapping&quot; : { &quot;type&quot; : &quot;long&quot;, &quot;doc_values&quot; : true }
+        }
+      }, {
+        &quot;date_fields&quot; : {
+          &quot;match&quot; : &quot;*&quot;,
+          &quot;match_mapping_type&quot; : &quot;date&quot;,
+          &quot;mapping&quot; : { &quot;type&quot; : &quot;date&quot;, &quot;doc_values&quot; : true }
+        }
+      }, {
+        &quot;geo_point_fields&quot; : {
+          &quot;match&quot; : &quot;*&quot;,
+          &quot;match_mapping_type&quot; : &quot;geo_point&quot;,
+          &quot;mapping&quot; : { &quot;type&quot; : &quot;geo_point&quot;, &quot;doc_values&quot; : true }
+        }
+      } ],
+      &quot;properties&quot; : {
+        &quot;@timestamp&quot;: { &quot;type&quot;: &quot;date&quot;, &quot;doc_values&quot; : true },
+        &quot;@version&quot;: { &quot;type&quot;: &quot;string&quot;, &quot;index&quot;: &quot;not_analyzed&quot;, &quot;doc_values&quot; : true },
+        &quot;geoip&quot;  : {
+          &quot;type&quot; : &quot;object&quot;,
+          &quot;dynamic&quot;: true,
+          &quot;properties&quot; : {
+            &quot;ip&quot;: { &quot;type&quot;: &quot;ip&quot;, &quot;doc_values&quot; : true },
+            &quot;location&quot; : { &quot;type&quot; : &quot;geo_point&quot;, &quot;doc_values&quot; : true },
+            &quot;latitude&quot; : { &quot;type&quot; : &quot;float&quot;, &quot;doc_values&quot; : true },
+            &quot;longitude&quot; : { &quot;type&quot; : &quot;float&quot;, &quot;doc_values&quot; : true }
+          }
+        }
+      }
+    }
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;All done on the Elasicsearch side.&lt;/p&gt;
+
+&lt;h2 id=&quot;repeat-with-me-laaaaaambda&quot;&gt;Repeat with me, Laaaaaambda!&lt;/h2&gt;
+
+&lt;p&gt;Clone my repo from github https://github.com/argais/cloudtrail_aws_es , now on the same folder you cloned it, on your terminal, install the requests module on the same folder with &lt;code&gt;pip install requests -t .&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Edit s3_lambda_es.py changing the following variables
+- host = the full hostname for your AWS ES endpoint (just the hostname, remove https:// and any trailing /)
+- region = region were your ES cluster is located
+- access_key and secret_key = a key pair to sign your requests to ES (not using environment ones from lambda, for some reason they didnt work for me)&lt;/p&gt;
+
+&lt;p&gt;Zip this entire folder (can keep readme, elastic_search_cloudtrail_template.json and .gitignore out).&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;&lt;strong&gt;Very important! The files must be on the root of the zip, not inside a folder.&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Create a new lambda function, I’ll call mine s3-cloudtrail-elasticsearch, because its just plain easy to remember.&lt;/p&gt;
+
+&lt;p&gt;Skip the blueprints, select Python, and for code upload the zipfile you just created.&lt;/p&gt;
+
+&lt;p&gt;Select the role for your function or create a new one (you need access to cloudwatch logs, and read to the s3 bucket), and finish creating the function. If you need help, refer to the aws docs website I linked before.&lt;/p&gt;
+
+&lt;p&gt;In short, our lambda function receives the event from s3, gets the bucket name and key (the log file name), we download the file from there, read its contents and loop over the log events, inserting each one of them into Elasticsearch&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;If you are pointing to an existing Elasticsearch cluster with other indexes in it, you might want to change the index name on the url.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;For each log event we push the event’s json to the Elasticsearch cluster.&lt;/p&gt;
+
+&lt;h2 id=&quot;s3-event&quot;&gt;S3 Event&lt;/h2&gt;
+
+&lt;p&gt;This is the easy one, go to the properties of your S3 bucket that is holding your cloudtrail logs, click on Events, Add Notification, give a name to it, mine will be s3_lambda_event, creative right?&lt;/p&gt;
+
+&lt;p&gt;In the Events line, select ObjectCreated(All), then on Send To select Lambda function, and select your lambda function created on the previous step.&lt;/p&gt;
+
+&lt;h2 id=&quot;let-me-see-it&quot;&gt;Let me see it!&lt;/h2&gt;
+
+&lt;p&gt;At this point, your s3 logs are being fed to Elasticsearch, and you can open Kibana now to see the good stuff.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;If you dont see anything on Elasticsearch, check the lambda function logs on cloudwatch. Theres a link on the monitoring tab of your lambda function.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;When you open Kibana for the first time it’ll ask you to configure a index pattern.
+If you look at our lambda code, the url variable has a /logstash- in it, thats our url pattern, so you really dont have to change anything since Kibana looks for it as default.
+Select @timestamp at the Time-field name dropdown and click on Create.&lt;/p&gt;
+
+&lt;p&gt;Theeeere you go! Now click on the discover window to see your data!!!&lt;/p&gt;
+
+&lt;p&gt;But what do I do with this? It doesnt look much better than a bunch of json files in a pretty screen!?!?!!&lt;/p&gt;
+
+&lt;p&gt;Easy little padawan.&lt;/p&gt;
+
+&lt;p&gt;Lets look at how these logs are structured. Here’s an example log entry&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;{
+  &quot;eventVersion&quot;: &quot;1.03&quot;,
+  &quot;userIdentity&quot;: {
+    &quot;type&quot;: &quot;IAMUser&quot;,
+    &quot;principalId&quot;: &quot;ALALA5HJQX73TDHSDOFUW&quot;,
+    &quot;arn&quot;: &quot;arn:aws:iam::801114545221:user/that.user&quot;,
+    &quot;accountId&quot;: &quot;801114545221&quot;,
+    &quot;accessKeyId&quot;: &quot;AKIAIBAAP55LADSQELQQ&quot;,
+    &quot;userName&quot;: &quot;that.user&quot;
+  },
+  &quot;@timestamp&quot;: &quot;2016-02-20T23:11:23Z&quot;,
+  &quot;eventSource&quot;: &quot;ec2.amazonaws.com&quot;,
+  &quot;eventName&quot;: &quot;DescribeInstances&quot;,
+  &quot;awsRegion&quot;: &quot;us-east-1&quot;,
+  &quot;sourceIPAddress&quot;: &quot;52.71.233.53&quot;,
+  &quot;userAgent&quot;: &quot;aws-sdk-java/1.9.22 Linux/3.14.48-33.39.amzn1.x86_64 Java_HotSpot(TM)_64-Bit_Server_VM/24.79-b02/1.7.0_79&quot;,
+  &quot;requestParameters&quot;: {
+    &quot;instancesSet&quot;: {},
+    &quot;filterSet&quot;: {},
+  },
+  &quot;responseElements&quot;: null,
+  &quot;requestID&quot;: &quot;2a74375c-f931-4630-b1b9-077d2df11884&quot;,
+  &quot;eventID&quot;: &quot;fd943a8d-03e7-4155-9ec1-bd27ad47a803&quot;,
+  &quot;eventType&quot;: &quot;AwsApiCall&quot;,
+  &quot;recipientAccountId&quot;: &quot;801114545221&quot;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;What does this tell us? quite a lot actually, userName from accountId, with the accessKeyId, ran a eventName at eventSource, at @timestamp, from sourceIPAddress.
+With this data you could make filters and dashboards showing any actions taken in your accounts.&lt;/p&gt;
+
+&lt;p&gt;Examples:
+- all actions taken by user
+- most active users
+- most active access keys
+- failed login attempts
+- changes in security groups&lt;/p&gt;
+
+&lt;p&gt;The queries are done using lucene query string syntax, its quite easy to use, so dont fret, type stuff on the search bar and you will get something back, if nothing, some instructions ;)&lt;/p&gt;
+
+&lt;p&gt;On the visualizations tab you can create new graphs based on queries you saved from the discover tab, or new queries.&lt;/p&gt;
+
+&lt;p&gt;Then you can jump on the dashboard tab, and add these visualizations to your dashboard, resizing them as you wish ;)&lt;/p&gt;
+
+&lt;h2 id=&quot;ok-so-what&quot;&gt;Ok… so what?&lt;/h2&gt;
+
+&lt;p&gt;So how is this usefull? Lets say someone deleted a user this week in one of your 200 accounts, all of them are feeding your Elasticsearch cluster.&lt;/p&gt;
+
+&lt;p&gt;At the discover tab you can click on the right top side to select a Time Filter of This Week, and then on the search field you could put +iam +DeleteUser, this will look for these two words in all the log entries, showing you all the users that were deleted in that period.&lt;/p&gt;
+
+&lt;p&gt;This is cool huh?&lt;/p&gt;
+
+&lt;p&gt;A lot easier than logging into 200 accounts manually to search for this ;)&lt;/p&gt;
+</description>
+        <pubDate>Sun, 13 Mar 2016 13:11:00 -0300</pubDate>
+        <link>//log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html</link>
+        <guid isPermaLink="true">//log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html</guid>
+        
+        <category>linux</category>
+        
+        <category>logstash</category>
+        
+        <category>elasticsearch</category>
+        
+        <category>kibana</category>
+        
+        <category>devops</category>
+        
+        <category>cloudtrail</category>
+        
+        <category>aws</category>
+        
+        <category>python</category>
+        
+        
+        <category>log_processing</category>
+        
+      </item>
     
       <item>
         <title>MySQL Output in Logstash</title>
@@ -44,7 +322,7 @@
 
 &lt;p&gt;Here is the sql to create what we will be using on this guide.&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;lineno&quot;&gt; 1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;CREATE&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;DATABASE&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;squid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-sql&quot; data-lang=&quot;sql&quot;&gt;&lt;span class=&quot;lineno&quot;&gt; 1&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;CREATE&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;DATABASE&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;squid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt; 2&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;CREATE&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;TABLE&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;squid&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;new_table&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt; 3&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;INT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;AUTO_INCREMENT&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt; 4&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;user&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;45&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
@@ -53,13 +331,13 @@
 &lt;span class=&quot;lineno&quot;&gt; 7&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;source_ip&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;VARCHAR&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt; 8&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;response_size&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;BIGINT&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt; 9&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;date&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;DATETIME&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;NULL&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-&lt;span class=&quot;lineno&quot;&gt;10&lt;/span&gt;   &lt;span class=&quot;k&quot;&gt;PRIMARY&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;KEY&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;span class=&quot;lineno&quot;&gt;10&lt;/span&gt;   &lt;span class=&quot;k&quot;&gt;PRIMARY&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;KEY&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;h1 id=&quot;lets-get-it-done&quot;&gt;Lets get it done!&lt;/h1&gt;
 
 &lt;p&gt;First things first, lets make an output filter on logstash, to send our logs as json to our app. So, like in the previous posts, create a new file in &lt;code&gt;/etc/logstash/conf.d/&lt;/code&gt; with the following content:&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span class=&quot;lineno&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;output&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span class=&quot;lineno&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;output&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt;2&lt;/span&gt;     &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;type&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;squid&amp;quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt;3&lt;/span&gt; 	    &lt;span class=&quot;n&quot;&gt;http&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt;4&lt;/span&gt; 		    &lt;span class=&quot;n&quot;&gt;format&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;json&amp;quot;&lt;/span&gt;
@@ -67,7 +345,7 @@
 &lt;span class=&quot;lineno&quot;&gt;6&lt;/span&gt; 		    &lt;span class=&quot;n&quot;&gt;url&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;http://localhost:90/&amp;quot;&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt;7&lt;/span&gt; 	  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt;8&lt;/span&gt;     &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-&lt;span class=&quot;lineno&quot;&gt;9&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;span class=&quot;lineno&quot;&gt;9&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;This is like saying, “if the type is squid, send all the stuff as json using post to http://localhost:90”. We will be running our Flask App on port 90.&lt;/p&gt;
 
@@ -81,7 +359,7 @@
 
 &lt;p&gt;Ok, now that this stuff is installed, lets get our app running, create a new file for our app.&lt;/p&gt;
 
-&lt;div class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span class=&quot;lineno&quot;&gt; 1&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;# import the modules we will be using&lt;/span&gt;
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span class=&quot;lineno&quot;&gt; 1&lt;/span&gt; &lt;span class=&quot;c&quot;&gt;# import the modules we will be using&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt; 2&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;MySQLdb&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;as&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;mysql&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt; 3&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;datetime&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;datetime&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt; 4&lt;/span&gt; &lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;json&lt;/span&gt;
@@ -125,7 +403,7 @@
 &lt;span class=&quot;lineno&quot;&gt;42&lt;/span&gt; 
 &lt;span class=&quot;lineno&quot;&gt;43&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;__name__&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&amp;quot;__main__&amp;quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
 &lt;span class=&quot;lineno&quot;&gt;44&lt;/span&gt; 	&lt;span class=&quot;c&quot;&gt;# run this on all interfaces and on port 90&lt;/span&gt;
-&lt;span class=&quot;lineno&quot;&gt;45&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;app&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;host&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;0.0.0.0&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;port&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;90&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;span class=&quot;lineno&quot;&gt;45&lt;/span&gt;     &lt;span class=&quot;n&quot;&gt;app&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;host&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&amp;#39;0.0.0.0&amp;#39;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;port&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;90&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
 
 &lt;p&gt;So what does it do? Well, basically, it opens a small webserver on port 90 that expects to receive a json formated input via post (that our logstash server will send).&lt;/p&gt;
 
@@ -141,7 +419,7 @@
 
 &lt;p&gt;&lt;strong&gt;TADA!&lt;/strong&gt; Squid logs into mysql!&lt;/p&gt;
 
-&lt;h2 id=&quot;now-you-can-easily-search-group-and-make-reports-with-it&quot;&gt;Now you can easily search, group and make reports with it!&lt;/h2&gt;
+&lt;p&gt;##Now you can easily search, group and make reports with it!&lt;/p&gt;
 
 &lt;blockquote&gt;
   &lt;p&gt;If you need more data from the logs you can add the fields on the database, and on the field vars and sql var, I am only collecting the bare minimum I need.&lt;/p&gt;
@@ -251,7 +529,7 @@ My server is complaining that the charset being sent is different then what was 
 
 &lt;p&gt;If its all working, you should see something like this on the default logstash dashboard on kibana (searching for squid).&lt;/p&gt;
 
-&lt;p&gt;[](/assets/article_images/2014-10-10-squid-log-filtering-with-elk-stack/squid-kibana-working.png)&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;/assets/article_images/2014-10-10-squid-log-filtering-with-elk-stack/squid-kibana-working.png&quot;&gt;&lt;/a&gt;&lt;/p&gt;
 
 &lt;p&gt;How is this usefull for monitoring squid? Well, different admins have different needs.&lt;/p&gt;
 
