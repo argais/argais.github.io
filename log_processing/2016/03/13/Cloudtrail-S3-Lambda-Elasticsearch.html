@@ -1,0 +1,406 @@
+
+
+  
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Cloudtrail -&gt; S3 -&gt; Lambda -&gt; Elasticsearch Service</title>
+  <meta name="description" content="...linux, python, cloud computing, cooking, music...
+">
+
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="//log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css">
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css">
+
+
+  
+    <!-- header start -->
+
+<a href="/" class="logo-readium"><span class="logo" style="background-image: url(/assets/images/fb_logo.png)"></span></a>
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="noarticleimage">
+          <div class="post-meta">
+            <h1 class="post-title">Cloudtrail -&gt; S3 -&gt; Lambda -&gt; Elasticsearch Service</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/avatar.png)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person"></h4>
+              on
+              <time datetime="2016-03-13T13:11:00-03:00">13 Mar 2016</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+          </div>
+        </div>
+        <br>
+        <br>
+        <br>
+        
+        <section class="post-content">
+          <div class="post-reading">
+            <span class="post-reading-time"></span> read
+          </div>
+          <a name="topofpage"></a>
+          <h1 id="cloudtrail---s3---lambda---elasticsearch-service">Cloudtrail -&gt; S3 -&gt; Lambda -&gt; Elasticsearch Service</h1>
+
+<p>Cloudtrail, we all need it, and hey, its fairly easy to check stuff on the console.</p>
+
+<p>Now, if you have multiple AWS accounts, it starts to get hairy, nobody wants to keep jumping over account consoles for that right?</p>
+
+<p>CLI magic is good, but sometimes, we just want something easy to use, or we want to correlate that data with something else. The usual path would be to setup an ELK stack and be done with it, its simple, it works, but its one more thing to manage.</p>
+
+<p>AWS now has Elasticsearch as a service, so the E part of the stack is covered, Kibana comes with it, there goes our K, so we’re only missing an L now.</p>
+
+<p>Cloudtrail logs are stored on S3, now we just need some way to get those logs into Elasticsearch.</p>
+
+<h2 id="enter-lambda--s3-events">Enter Lambda + S3 events!</h2>
+
+<p>We can setup an S3 a trigger, so whenever a file is put on our bucket we get a call to a lambda function.
+That gives us a completely serverless solution for this issue, sweet huh?!</p>
+
+<p>So our todo list is:
+1- provision an AWS Elasticsearch Service cluster
+2- create a Lambda function that receives S3 events, gets the bucket and sends the json info into Elasticsearch
+3- set the S3 event to trigger the lambda function
+4- get some dashboard action!</p>
+
+<h2 id="warnings-and-requirements">Warnings and Requirements</h2>
+
+<ul>
+  <li>I’m assuming at least a basic level of AWS expertise here (how to use the consoles, and click on buttons!), that said, https://docs.aws.amazon.com is an awesome resource ;)</li>
+  <li>I’m also assuming that you already set up cloudtrail and it is saving logs into a s3 bucket just fine.</li>
+  <li>This is a basic how-to, all open security (every time you run all open in production a kitten dies! think of the kittens!), read the docs on lambda, s3, elasticsearch and go with the good old least privilege rule.</li>
+</ul>
+
+<h2 id="elaaaaaaaaaaaaaaaaaaaaaaaastic-search">Elaaaaaaaaaaaaaaaaaaaaaaaastic Search</h2>
+
+<p>There’s plenty of posts on the internet about sharding and replication and stuff on Elasticsearch, so I’ll keep this short.</p>
+
+<p>If this is important to you, get two servers at least, and replicate between regions.
+For this post we will keep this simple, just launch a single server in your cluster, even a t2 instance should be ok, in prod, with a couple accounts, I’m using a pair m3.medium nodes (for 90 really active aws accounts). YMMV.</p>
+
+<p>Keep note of your endpoint url, for your lambda function, and your kibana url, for.. well.. accessing kibana of course :)</p>
+
+<p>Now lets add a template for our indexes, so Kibana doesnt cry a river later about analysed fields.</p>
+
+<pre><code>PUT /_template/logstash
+{
+  "template" : "logstash-*",
+  "settings" : {
+    "index.refresh_interval" : "5s"
+  },
+  "mappings" : {
+    "_default_" : {
+      "_all" : {"enabled" : true, "omit_norms" : true},
+      "dynamic_templates" : [ {
+        "message_field" : {
+          "match" : "message",
+          "match_mapping_type" : "string",
+          "mapping" : {
+            "type" : "string", "index" : "analyzed", "omit_norms" : true,
+            "fielddata" : { "format" : "enabled" }
+          }
+        }
+      }, {
+        "string_fields" : {
+          "match" : "*",
+          "match_mapping_type" : "string",
+          "mapping" : {
+            "type" : "string", "index" : "analyzed", "omit_norms" : true,
+            "fielddata" : { "format" : "enabled" },
+            "fields" : {
+              "raw" : {"type": "string", "index" : "not_analyzed", "doc_values" : true, "ignore_above" : 256}
+            }
+          }
+        }
+      }, {
+        "float_fields" : {
+          "match" : "*",
+          "match_mapping_type" : "float",
+          "mapping" : { "type" : "float", "doc_values" : true }
+        }
+      }, {
+        "double_fields" : {
+          "match" : "*",
+          "match_mapping_type" : "double",
+          "mapping" : { "type" : "double", "doc_values" : true }
+        }
+      }, {
+        "byte_fields" : {
+          "match" : "*",
+          "match_mapping_type" : "byte",
+          "mapping" : { "type" : "byte", "doc_values" : true }
+        }
+      }, {
+        "short_fields" : {
+          "match" : "*",
+          "match_mapping_type" : "short",
+          "mapping" : { "type" : "short", "doc_values" : true }
+        }
+      }, {
+        "integer_fields" : {
+          "match" : "*",
+          "match_mapping_type" : "integer",
+          "mapping" : { "type" : "integer", "doc_values" : true }
+        }
+      }, {
+        "long_fields" : {
+          "match" : "*",
+          "match_mapping_type" : "long",
+          "mapping" : { "type" : "long", "doc_values" : true }
+        }
+      }, {
+        "date_fields" : {
+          "match" : "*",
+          "match_mapping_type" : "date",
+          "mapping" : { "type" : "date", "doc_values" : true }
+        }
+      }, {
+        "geo_point_fields" : {
+          "match" : "*",
+          "match_mapping_type" : "geo_point",
+          "mapping" : { "type" : "geo_point", "doc_values" : true }
+        }
+      } ],
+      "properties" : {
+        "@timestamp": { "type": "date", "doc_values" : true },
+        "@version": { "type": "string", "index": "not_analyzed", "doc_values" : true },
+        "geoip"  : {
+          "type" : "object",
+          "dynamic": true,
+          "properties" : {
+            "ip": { "type": "ip", "doc_values" : true },
+            "location" : { "type" : "geo_point", "doc_values" : true },
+            "latitude" : { "type" : "float", "doc_values" : true },
+            "longitude" : { "type" : "float", "doc_values" : true }
+          }
+        }
+      }
+    }
+  }
+}
+</code></pre>
+
+<p>All done on the Elasicsearch side.</p>
+
+<h2 id="repeat-with-me-laaaaaambda">Repeat with me, Laaaaaambda!</h2>
+
+<p>Clone my repo from github https://github.com/argais/cloudtrail_aws_es , now on the same folder you cloned it, on your terminal, install the requests module on the same folder with <code>pip install requests -t .</code></p>
+
+<p>Edit s3_lambda_es.py changing the following variables
+- host = the full hostname for your AWS ES endpoint (just the hostname, remove https:// and any trailing /)
+- region = region were your ES cluster is located
+- access_key and secret_key = a key pair to sign your requests to ES (not using environment ones from lambda, for some reason they didnt work for me)</p>
+
+<p>Zip this entire folder (can keep readme, elastic_search_cloudtrail_template.json and .gitignore out).</p>
+
+<blockquote>
+  <p><strong>Very important! The files must be on the root of the zip, not inside a folder.</strong></p>
+</blockquote>
+
+<p>Create a new lambda function, I’ll call mine s3-cloudtrail-elasticsearch, because its just plain easy to remember.</p>
+
+<p>Skip the blueprints, select Python, and for code upload the zipfile you just created.</p>
+
+<p>Select the role for your function or create a new one (you need access to cloudwatch logs, and read to the s3 bucket), and finish creating the function. If you need help, refer to the aws docs website I linked before.</p>
+
+<p>In short, our lambda function receives the event from s3, gets the bucket name and key (the log file name), we download the file from there, read its contents and loop over the log events, inserting each one of them into Elasticsearch</p>
+
+<blockquote>
+  <p>If you are pointing to an existing Elasticsearch cluster with other indexes in it, you might want to change the index name on the url.</p>
+</blockquote>
+
+<p>For each log event we push the event’s json to the Elasticsearch cluster.</p>
+
+<h2 id="s3-event">S3 Event</h2>
+
+<p>This is the easy one, go to the properties of your S3 bucket that is holding your cloudtrail logs, click on Events, Add Notification, give a name to it, mine will be s3_lambda_event, creative right?</p>
+
+<p>In the Events line, select ObjectCreated(All), then on Send To select Lambda function, and select your lambda function created on the previous step.</p>
+
+<h2 id="let-me-see-it">Let me see it!</h2>
+
+<p>At this point, your s3 logs are being fed to Elasticsearch, and you can open Kibana now to see the good stuff.</p>
+
+<blockquote>
+  <p>If you dont see anything on Elasticsearch, check the lambda function logs on cloudwatch. Theres a link on the monitoring tab of your lambda function.</p>
+</blockquote>
+
+<p>When you open Kibana for the first time it’ll ask you to configure a index pattern.
+If you look at our lambda code, the url variable has a /logstash- in it, thats our url pattern, so you really dont have to change anything since Kibana looks for it as default.
+Select @timestamp at the Time-field name dropdown and click on Create.</p>
+
+<p>Theeeere you go! Now click on the discover window to see your data!!!</p>
+
+<p>But what do I do with this? It doesnt look much better than a bunch of json files in a pretty screen!?!?!!</p>
+
+<p>Easy little padawan.</p>
+
+<p>Lets look at how these logs are structured. Here’s an example log entry</p>
+
+<pre><code>{
+  "eventVersion": "1.03",
+  "userIdentity": {
+    "type": "IAMUser",
+    "principalId": "ALALA5HJQX73TDHSDOFUW",
+    "arn": "arn:aws:iam::801114545221:user/that.user",
+    "accountId": "801114545221",
+    "accessKeyId": "AKIAIBAAP55LADSQELQQ",
+    "userName": "that.user"
+  },
+  "@timestamp": "2016-02-20T23:11:23Z",
+  "eventSource": "ec2.amazonaws.com",
+  "eventName": "DescribeInstances",
+  "awsRegion": "us-east-1",
+  "sourceIPAddress": "52.71.233.53",
+  "userAgent": "aws-sdk-java/1.9.22 Linux/3.14.48-33.39.amzn1.x86_64 Java_HotSpot(TM)_64-Bit_Server_VM/24.79-b02/1.7.0_79",
+  "requestParameters": {
+    "instancesSet": {},
+    "filterSet": {},
+  },
+  "responseElements": null,
+  "requestID": "2a74375c-f931-4630-b1b9-077d2df11884",
+  "eventID": "fd943a8d-03e7-4155-9ec1-bd27ad47a803",
+  "eventType": "AwsApiCall",
+  "recipientAccountId": "801114545221"
+}
+</code></pre>
+
+<p>What does this tell us? quite a lot actually, userName from accountId, with the accessKeyId, ran a eventName at eventSource, at @timestamp, from sourceIPAddress.
+With this data you could make filters and dashboards showing any actions taken in your accounts.</p>
+
+<p>Examples:
+- all actions taken by user
+- most active users
+- most active access keys
+- failed login attempts
+- changes in security groups</p>
+
+<p>The queries are done using lucene query string syntax, its quite easy to use, so dont fret, type stuff on the search bar and you will get something back, if nothing, some instructions ;)</p>
+
+<p>On the visualizations tab you can create new graphs based on queries you saved from the discover tab, or new queries.</p>
+
+<p>Then you can jump on the dashboard tab, and add these visualizations to your dashboard, resizing them as you wish ;)</p>
+
+<h2 id="ok-so-what">Ok… so what?</h2>
+
+<p>So how is this usefull? Lets say someone deleted a user this week in one of your 200 accounts, all of them are feeding your Elasticsearch cluster.</p>
+
+<p>At the discover tab you can click on the right top side to select a Time Filter of This Week, and then on the search field you could put +iam +DeleteUser, this will look for these two words in all the log entries, showing you all the users that were deleted in that period.</p>
+
+<p>This is cool huh?</p>
+
+<p>A lot easier than logging into 200 accounts manually to search for this ;)</p>
+
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=Cloudtrail+-%3E+S3+-%3E+Lambda+-%3E+Elasticsearch+Service&amp;url=//log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch" onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/avatar.png)">Blog Logo</div>
+              <h4>Fernando Battistella</h4>
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2016-03-13 13:11">13 Mar 2016</time></p>
+            </section>
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Fernando Battistella</a> © 2016<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image" style="background-image: url(/assets/images/banner.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">Linuxaria Gourmet</h1>
+        <h2 class="blog-description">...linux, python, cloud computing, cooking, music...
+</h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+  
+
