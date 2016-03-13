@@ -6,8 +6,8 @@
 </description>
     <link>//</link>
     <atom:link href="//feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 13 Mar 2016 17:01:38 -0300</pubDate>
-    <lastBuildDate>Sun, 13 Mar 2016 17:01:38 -0300</lastBuildDate>
+    <pubDate>Sun, 13 Mar 2016 17:04:20 -0300</pubDate>
+    <lastBuildDate>Sun, 13 Mar 2016 17:04:20 -0300</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
@@ -27,8 +27,9 @@
 &lt;p&gt;We can setup an S3 a trigger, so whenever a file is put on our bucket we get a call to a lambda function.
 That gives us a completely serverless solution for this issue, sweet huh?!&lt;/p&gt;
 
-&lt;p&gt;So our todo list is:
-1- provision an AWS Elasticsearch Service cluster
+&lt;p&gt;So our todo list is:&lt;/p&gt;
+
+&lt;p&gt;1- provision an AWS Elasticsearch Service cluster
 2- create a Lambda function that receives S3 events, gets the bucket and sends the json info into Elasticsearch
 3- set the S3 event to trigger the lambda function
 4- get some dashboard action!&lt;/p&gt;
@@ -156,10 +157,13 @@ For this post we will keep this simple, just launch a single server in your clus
 
 &lt;p&gt;Clone my repo from github https://github.com/argais/cloudtrail_aws_es , now on the same folder you cloned it, on your terminal, install the requests module on the same folder with &lt;code&gt;pip install requests -t .&lt;/code&gt;&lt;/p&gt;
 
-&lt;p&gt;Edit s3_lambda_es.py changing the following variables
-- host = the full hostname for your AWS ES endpoint (just the hostname, remove https:// and any trailing /)
-- region = region were your ES cluster is located
-- access_key and secret_key = a key pair to sign your requests to ES (not using environment ones from lambda, for some reason they didnt work for me)&lt;/p&gt;
+&lt;p&gt;Edit s3_lambda_es.py changing the following variables&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;host = the full hostname for your AWS ES endpoint (just the hostname, remove https:// and any trailing /)&lt;/li&gt;
+  &lt;li&gt;region = region were your ES cluster is located&lt;/li&gt;
+  &lt;li&gt;access_key and secret_key = a key pair to sign your requests to ES (not using environment ones from lambda, for some reason they didnt work for me)&lt;/li&gt;
+&lt;/ul&gt;
 
 &lt;p&gt;Zip this entire folder (can keep readme, elastic_search_cloudtrail_template.json and .gitignore out).&lt;/p&gt;
 
@@ -192,7 +196,7 @@ For this post we will keep this simple, just launch a single server in your clus
 &lt;p&gt;At this point, your s3 logs are being fed to Elasticsearch, and you can open Kibana now to see the good stuff.&lt;/p&gt;
 
 &lt;blockquote&gt;
-  &lt;p&gt;If you dont see anything on Elasticsearch, check the lambda function logs on cloudwatch. Theres a link on the monitoring tab of your lambda function.&lt;/p&gt;
+  &lt;p&gt;If you don’t see anything on Elasticsearch, check the lambda function logs on cloudwatch. There’s a link on the monitoring tab of your lambda function.&lt;/p&gt;
 &lt;/blockquote&gt;
 
 &lt;p&gt;When you open Kibana for the first time it’ll ask you to configure a index pattern.
@@ -238,12 +242,15 @@ Select @timestamp at the Time-field name dropdown and click on Create.&lt;/p&gt;
 &lt;p&gt;What does this tell us? quite a lot actually, userName from accountId, with the accessKeyId, ran a eventName at eventSource, at @timestamp, from sourceIPAddress.
 With this data you could make filters and dashboards showing any actions taken in your accounts.&lt;/p&gt;
 
-&lt;p&gt;Examples:
-- all actions taken by user
-- most active users
-- most active access keys
-- failed login attempts
-- changes in security groups&lt;/p&gt;
+&lt;p&gt;Examples:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;all actions taken by user&lt;/li&gt;
+  &lt;li&gt;most active users&lt;/li&gt;
+  &lt;li&gt;most active access keys&lt;/li&gt;
+  &lt;li&gt;failed login attempts&lt;/li&gt;
+  &lt;li&gt;changes in security groups&lt;/li&gt;
+&lt;/ul&gt;
 
 &lt;p&gt;The queries are done using lucene query string syntax, its quite easy to use, so dont fret, type stuff on the search bar and you will get something back, if nothing, some instructions ;)&lt;/p&gt;
 
