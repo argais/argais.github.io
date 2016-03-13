@@ -6,15 +6,13 @@
 </description>
     <link>//</link>
     <atom:link href="//feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 13 Mar 2016 17:00:20 -0300</pubDate>
-    <lastBuildDate>Sun, 13 Mar 2016 17:00:20 -0300</lastBuildDate>
+    <pubDate>Sun, 13 Mar 2016 17:01:38 -0300</pubDate>
+    <lastBuildDate>Sun, 13 Mar 2016 17:01:38 -0300</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
         <title>Cloudtrail -&gt; S3 -&gt; Lambda -&gt; Elasticsearch Service</title>
-        <description>&lt;h1 id=&quot;cloudtrail---s3---lambda---elasticsearch-service&quot;&gt;Cloudtrail -&amp;gt; S3 -&amp;gt; Lambda -&amp;gt; Elasticsearch Service&lt;/h1&gt;
-
-&lt;p&gt;Cloudtrail, we all need it, and hey, its fairly easy to check stuff on the console.&lt;/p&gt;
+        <description>&lt;p&gt;Cloudtrail, we all need it, and hey, its fairly easy to check stuff on the console.&lt;/p&gt;
 
 &lt;p&gt;Now, if you have multiple AWS accounts, it starts to get hairy, nobody wants to keep jumping over account consoles for that right?&lt;/p&gt;
 
