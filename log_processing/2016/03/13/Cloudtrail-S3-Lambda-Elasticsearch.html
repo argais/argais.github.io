@@ -75,10 +75,11 @@ That gives us a completely serverless solution for this issue, sweet huh?!</p>
 
 <p>So our todo list is:</p>
 
-<p>1- provision an AWS Elasticsearch Service cluster
-2- create a Lambda function that receives S3 events, gets the bucket and sends the json info into Elasticsearch
-3- set the S3 event to trigger the lambda function
-4- get some dashboard action!</p>
+<ul>
+  <li>provision an AWS Elasticsearch Service cluster</li>
+  <li>create a Lambda function that receives S3 events, gets the bucket and sends the json info into Elasticsearch</li>
+  <li>set the S3 event to trigger the lambda function</li>
+</ul>
 
 <h2 id="warnings-and-requirements">Warnings and Requirements</h2>
 
@@ -312,7 +313,7 @@ With this data you could make filters and dashboards showing any actions taken i
 
 <p>This is cool huh?</p>
 
-<p>A lot easier than logging into 200 accounts manually to search for this ;)</p>
+<p>A lot easier than jumping around accounts and consoles looking for stuff ;)</p>
 
         </section>
         <footer class="post-footer">

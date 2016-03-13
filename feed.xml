@@ -6,8 +6,8 @@
 </description>
     <link>//</link>
     <atom:link href="//feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 13 Mar 2016 17:04:20 -0300</pubDate>
-    <lastBuildDate>Sun, 13 Mar 2016 17:04:20 -0300</lastBuildDate>
+    <pubDate>Sun, 13 Mar 2016 17:06:23 -0300</pubDate>
+    <lastBuildDate>Sun, 13 Mar 2016 17:06:23 -0300</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
@@ -29,10 +29,11 @@ That gives us a completely serverless solution for this issue, sweet huh?!&lt;/p
 
 &lt;p&gt;So our todo list is:&lt;/p&gt;
 
-&lt;p&gt;1- provision an AWS Elasticsearch Service cluster
-2- create a Lambda function that receives S3 events, gets the bucket and sends the json info into Elasticsearch
-3- set the S3 event to trigger the lambda function
-4- get some dashboard action!&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;provision an AWS Elasticsearch Service cluster&lt;/li&gt;
+  &lt;li&gt;create a Lambda function that receives S3 events, gets the bucket and sends the json info into Elasticsearch&lt;/li&gt;
+  &lt;li&gt;set the S3 event to trigger the lambda function&lt;/li&gt;
+&lt;/ul&gt;
 
 &lt;h2 id=&quot;warnings-and-requirements&quot;&gt;Warnings and Requirements&lt;/h2&gt;
 
@@ -266,7 +267,7 @@ With this data you could make filters and dashboards showing any actions taken i
 
 &lt;p&gt;This is cool huh?&lt;/p&gt;
 
-&lt;p&gt;A lot easier than logging into 200 accounts manually to search for this ;)&lt;/p&gt;
+&lt;p&gt;A lot easier than jumping around accounts and consoles looking for stuff ;)&lt;/p&gt;
 </description>
         <pubDate>Sun, 13 Mar 2016 13:11:00 -0300</pubDate>
         <link>//log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html</link>
