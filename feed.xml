@@ -6,9 +6,34 @@
 </description>
     <link>//</link>
     <atom:link href="//feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sun, 13 Mar 2016 17:06:23 -0300</pubDate>
-    <lastBuildDate>Sun, 13 Mar 2016 17:06:23 -0300</lastBuildDate>
+    <pubDate>Sun, 08 May 2016 20:45:35 -0300</pubDate>
+    <lastBuildDate>Sun, 08 May 2016 20:45:35 -0300</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
+    
+      <item>
+        <title>Generate SSH Public Key from Private Key</title>
+        <description>&lt;p&gt;I’ll be posting small tidbits from time to time, as not so often used stuff like this is easily forgotten, and my google-fu always takes me to different places :) So, using the blog as a notebook of sorts. Could use gists, 
+but I dump so much random stuff in there that I better not use those for reference.&lt;/p&gt;
+
+&lt;p&gt;So, this is for when you get that .pem key from aws or somewhere else, and for some weird reason you need the pubkey for it!&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ssh-keygen -y -f your_private_key.pem &amp;gt; your_public_key.pub
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;That was hard huh? Yeah I know :D&lt;/p&gt;
+
+</description>
+        <pubDate>Sun, 08 May 2016 17:42:00 -0300</pubDate>
+        <link>//tidbits/2016/05/08/Generate-SSH-Public-key-from-private-key.html</link>
+        <guid isPermaLink="true">//tidbits/2016/05/08/Generate-SSH-Public-key-from-private-key.html</guid>
+        
+        <category>linux</category>
+        
+        <category>ssh</category>
+        
+        
+        <category>tidbits</category>
+        
+      </item>
     
       <item>
         <title>Cloudtrail -&gt; S3 -&gt; Lambda -&gt; Elasticsearch Service</title>
