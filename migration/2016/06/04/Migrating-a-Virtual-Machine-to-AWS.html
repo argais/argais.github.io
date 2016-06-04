@@ -1,0 +1,463 @@
+
+
+  
+  <meta charset="utf-8">
+  <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- (1) force latest IE rendering engine: bit.ly/1c8EiC9 -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <title>Importing a Virtual Machine into AWS</title>
+  <meta name="description" content="...linux, python, cloud computing, cooking, music...
+">
+
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="canonical" href="//migration/2016/06/04/Migrating-a-Virtual-Machine-to-AWS.html">
+
+  <link rel="shortcut icon" href="/assets/images/favicon.ico">
+<!--  <link rel="stylesheet" href=""> -->
+  <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
+  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css">
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css">
+
+
+  
+    <!-- header start -->
+
+<a href="/" class="logo-readium"><span class="logo" style="background-image: url(/assets/images/fb_logo.png)"></span></a>
+
+<!-- header end -->
+
+    <main class="content" role="main">
+      <article class="post">
+        
+        <div class="noarticleimage">
+          <div class="post-meta">
+            <h1 class="post-title">Importing a Virtual Machine into AWS</h1>
+            <div class="cf post-meta-text">
+              <div class="author-image" style="background-image: url(/assets/images/avatar.png)">Blog Logo</div>
+              <h4 class="author-name" itemprop="author" itemscope itemtype="http://schema.org/Person"></h4>
+              on
+              <time datetime="2016-06-04T10:15:00-03:00">04 Jun 2016</time>
+              <!-- , tagged on <span class="post-tag-">, <a href="/tag/"></a></span> -->
+            </div>
+          </div>
+        </div>
+        <br>
+        <br>
+        <br>
+        
+        <section class="post-content">
+          <div class="post-reading">
+            <span class="post-reading-time"></span> read
+          </div>
+          <a name="topofpage"></a>
+          <p>AWS documentation on this subject is really good, as most of the docs on their site, but after migrating a couple hundred VMs from vmware and xen into aws, I decided to document this here so I don’t have to go searching around a bunch of docs every single time.</p>
+
+<p>This isn’t just a copy of parts of the docs, there’s a lot in my process that came from failing, and finding a gotcha here and there.</p>
+
+<h2 id="preparing-the-account">Preparing the account</h2>
+
+<p>There’s some stuff you need to get done before starting.</p>
+
+<h3 id="s3-bucket">S3 bucket</h3>
+
+<p>Yes you’re going to need one, so get to your cli and create one.</p>
+
+<p><code>aws s3 mb s3://myimagebucket</code></p>
+
+<h3 id="vm-import-service-role-and-policy">VM Import Service Role and Policy</h3>
+
+<p>The vm import service will need to download files from your bucket, and do some other stuff, for that it needs a role and permissions.</p>
+
+<p>Create a file called trust-policy.json with the following contents:</p>
+
+<pre><code>{
+   "Version":"2012-10-17",
+   "Statement":[
+      {
+         "Sid":"",
+         "Effect":"Allow",
+         "Principal":{
+            "Service":"vmie.amazonaws.com"
+         },
+         "Action":"sts:AssumeRole",
+         "Condition":{
+            "StringEquals":{
+               "sts:ExternalId":"vmimport"
+            }
+         }
+      }
+   ]
+}
+</code></pre>
+
+<p>Now lets created the role.</p>
+
+<p><code>aws iam create-role --role-name vmimport --assume-role-policy-document file://trust-policy.json</code></p>
+
+<p>This role needs a policy that describes what it can do, so create a file called role-policy.json with the following contents:</p>
+
+<pre><code>{
+   "Version":"2012-10-17",
+   "Statement":[
+      {
+         "Effect":"Allow",
+         "Action":[
+            "s3:ListBucket",
+            "s3:GetBucketLocation"
+         ],
+         "Resource":[
+            "arn:aws:s3:::&lt;disk-image-file-bucket&gt;"
+         ]
+      },
+      {
+         "Effect":"Allow",
+         "Action":[
+            "s3:GetObject"
+         ],
+         "Resource":[
+            "arn:aws:s3:::&lt;disk-image-file-bucket&gt;/*"
+         ]
+      },
+      {
+         "Effect":"Allow",
+         "Action":[
+            "ec2:ModifySnapshotAttribute",
+            "ec2:CopySnapshot",
+            "ec2:RegisterImage",
+            "ec2:Describe*"
+         ],
+         "Resource":"*"
+      }
+   ]
+}
+</code></pre>
+
+<p>Obviously you’re going to change <disk-image-file-bucket> to the name of your bucket, in my case it'll be myimagebucket.</disk-image-file-bucket></p>
+
+<p>This policy allows the vm import service to read from that bucket, and to create us an AMI after doing its importing business.</p>
+
+<h2 id="permissions">Permissions</h2>
+
+<p>If you want to get down to really detailed permissions, you can create an iam user with the following policy applied to it:</p>
+
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:DeleteBucket",
+        "s3:DeleteObject",
+        "s3:GetBucketLocation",
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:PutObject"
+      ],
+      "Resource": ["arn:aws:s3:::mys3bucket","arn:aws:s3:::mys3bucket/*"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CancelConversionTask",
+        "ec2:CancelExportTask",
+        "ec2:CreateImage",
+        "ec2:CreateInstanceExportTask",
+        "ec2:CreateTags",
+        "ec2:DeleteTags",
+        "ec2:DescribeConversionTasks",
+        "ec2:DescribeExportTasks",
+        "ec2:DescribeInstanceAttribute",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeInstances",
+        "ec2:DescribeTags",
+        "ec2:ImportInstance",
+        "ec2:ImportVolume",
+        "ec2:StartInstances",
+        "ec2:StopInstances",
+        "ec2:TerminateInstances",
+        "ec2:ImportImage",
+        "ec2:ImportSnapshot",
+        "ec2:DescribeImportImageTasks",
+        "ec2:DescribeImportSnapshotTasks",
+        "ec2:CancelImportTask"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+</code></pre>
+
+<p>In my case, I usually have an admin user when I’m doing migrations, so I never got to test this policy (straight from the docs :D)</p>
+
+<h2 id="limitations">Limitations</h2>
+
+<p>Boring list of limitations at http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/VMImportPrerequisites.html#vmimport-limitations</p>
+
+<h2 id="requirements-compatibility-and-preparing-your-instance-for-migration">Requirements, compatibility and preparing your instance for migration</h2>
+
+<h3 id="os">OS</h3>
+<p>As a general rule of thumb if you’re not trying to import a dinosaur into AWS you should be fine.</p>
+
+<p>Meaning, keep your debian 5-, redhat 4-, windows xp-, etc away from here.
+Just to be sure, check the docs, http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/VMImportPrerequisites.html has a list of officially compatible OSs</p>
+
+<h3 id="disk-sizes">Disk sizes</h3>
+<p>No disk should be bigger than 1TB.</p>
+
+<h3 id="image-formats">Image formats</h3>
+<p>I’ve only dealt with OVA files for this process, have heard from friends they had no issues with hyper-v, besides it being hyper-v :)</p>
+
+<h3 id="volume-types-and-filesystems">Volume types and Filesystems</h3>
+<p>Straight from the docs.</p>
+
+<blockquote>
+  <p>Windows (32- and 64-bit)
+&gt; VM Import/Export supports MBR-partitioned volumes that are formatted using the NTFS filesystem. GUID Partition Table (GPT) partitioned volumes are not supported.</p>
+</blockquote>
+
+<blockquote>
+  <p>Linux/Unix (64-bit)
+&gt; VM Import/Export supports MBR-partitioned volumes that are formatted using ext2, ext3, ext4, Btrfs, JFS, or XFS filesystem. GUID Partition Table (GPT) partitioned volumes are not supported.</p>
+</blockquote>
+
+<h3 id="preparing-the-instance">Preparing the instance</h3>
+
+<p>This is a mix of documentation and my experience of what gives me a better rate of success.</p>
+
+<h4 id="common-steps">Common Steps</h4>
+
+<ul>
+  <li>remove cdrom drive</li>
+  <li>remove floppy drive</li>
+  <li>disable ipv6</li>
+  <li>set clock to utc</li>
+  <li>set network to dhcp</li>
+  <li>keep only one network interface if you have multiple nics</li>
+  <li>disable firewalls</li>
+  <li>disable antivirus</li>
+  <li>add a local root/administrator password if one isn’t set</li>
+  <li>uninstall vmware tools, xen tools, whatever tools.</li>
+  <li>in fact, this is a good time to do some house keeping and remove those pesky old logs and unused software</li>
+</ul>
+
+<h4 id="windows">Windows</h4>
+
+<ul>
+  <li>remove instance from domain</li>
+</ul>
+
+<h4 id="linux">Linux</h4>
+
+<ul>
+  <li>remove lvm.
+    <ul>
+      <li>I usually use vmware vconverter to clone the virtual machine and remove lvm in the process, usually is faster than any other method.</li>
+      <li>When about to hit the last button to run the conversion job</li>
+      <li>edit the settings for disk</li>
+      <li>go to the advanced tab, layout</li>
+      <li>change it to Thin provisioning</li>
+      <li>move the lvm disks/partitions into the normal volume</li>
+      <li>delete the lvm</li>
+      <li>rejoice!</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="get-it-done">Get it done!</h2>
+
+<p>Ok, you’ve read all the boring stuff, got your instances prepared for migration, now lets get to it!</p>
+
+<h3 id="first-step---export-the-instance-to-an-ova">First step - export the instance to an OVA</h3>
+
+<p>Sure you can do separate disks and whatever, lets keep it simple, export an ova, one file, no complications.</p>
+
+<h3 id="second-step---upload-to-s3">Second step - upload to s3</h3>
+
+<p>Not much to say, lets just hope you don’t have 10Mbps upload and a couple terabytes of instances to upload!</p>
+
+<p><code>aws s3 cp yourovafile.ova s3://&lt;yours3bucket&gt;/</code></p>
+
+<p>In fact, if you do have crappy upload, and a lot of data to move, check AWS Import/Export page, there’s AWS Snowball for huge ammounts of data (dozens of TB, really) and you can even send a hard drive with your OVAs to AWS.</p>
+
+<p>Not going into details here, use your google search powers.</p>
+
+<h3 id="third-step---lets-import-it">Third step - lets import it!</h3>
+
+<p>You can do up to 20 imports at the same time, if you need more, request a limit increase from aws.</p>
+
+<p>Create a simple json file like this:</p>
+
+<pre><code>[{
+    "Description": "XXXXX",
+    "Format": "ova",
+    "UserBucket": {
+        "S3Bucket": "&lt;yours3bucket&gt;",
+        "S3Key": "XXXXX"
+    }
+}]
+</code></pre>
+
+<p>Change XXXXX to the file name of your ova, in description you can really put anything, I just put the ova file there too.</p>
+
+<p>Don’t forget to put your bucket name in the obvious place.</p>
+
+<p>Now, if you’re just importing a linux image, run:</p>
+
+<p><code>aws ec2 import-image --disk-containers file://yourfilename.json</code></p>
+
+<p>If you’re importing a windows image run:</p>
+
+<p><code>aws ec2 import-image --disk-containers file://yourfilename.json --platform "Windows"</code></p>
+
+<p>If you want you want to bring your own license (windows, some linuxes), just add <code>--license-type "BYOL"</code> to these lines.</p>
+
+<h3 id="fourth-step---wait-for-it">Fourth step - wait for it!</h3>
+
+<p>After running the import command you will receive an answer from the import service with some stuff, keep note of the Import Task Id, its usually the last entry in the json response, and should look like “import-ami-something”</p>
+
+<p>Why you need it? Well, you want to track the status of the importing job right?</p>
+
+<p>To see how your job is doing, run:</p>
+
+<p><code>aws ec2 describe-import-image-tasks --import-task-ids "import-ami-something"</code></p>
+
+<p>You can check the status of various import jobs at once by adding more import task ids! Just add them to the end of the command.</p>
+
+<p><code>aws ec2 describe-import-image-tasks --import-task-ids "import-ami-something1" "import-ami-something2" "import-ami-something3"</code></p>
+
+<h4 id="status">Status</h4>
+
+<p>Now, you will notice that you get a lot of information on these job status, what you want to keep an eye on is the Status and the ImageId.
+There’s a range of values that will go on the Status field, from preparing, to converting, to preparing ami (if you got to this one its usually a success), to complete.</p>
+
+<p>Sometimes, you will run into a failure, and a field will describe what was the error, the description is mostly useless, so just review all preparation steps.</p>
+
+<p>I’ve run into a couple errors complaining about the OVA format, even when it comes from the same server/platform that exported other successful OVAs, so, if you get to that, you’re looking at manually migrating it (create a new instance, copy stuff, setup, blablabla), or opening a ticket to aws to get some help.</p>
+
+<h3 id="fifth-step---launch-it">Fifth step - launch it!</h3>
+
+<p>Yay, your status says complete, then take note of the Image Id, its your ami-something, and go launch an instance from that AMI, you’re done, be happy, go get more coffee!</p>
+
+<h2 id="last-notes-and-recommendations">Last notes and recommendations</h2>
+
+<p>I’ve migrated 500+ instances (and counting) into aws using this process, from windows 2003 to 2012, to all kinds of centos, ubuntu, redhat, debian instances, from vmware (vcenter or esxi) and xen servers.</p>
+
+<p>Looks like a really extensive process, but mostly its just taking a couple minutes to prepare the account, make a couple scripts to speed up preparing the instances, and then its a lot of waiting for OVAs to export, upload to S3, and importing.</p>
+
+<p>The importing task usually doesn’t take more than a hour, and rarelly fails, the average failure rate I’ve been seeing is around 1% of the instances, and that was windows, never failed a single linux import.</p>
+
+<p>Depending on how much you have to migrate, and if your upload is crappy with no way to upgrade it, consider using snowball or sending a harddrive to aws.</p>
+
+<p>So that’s all, hit me on twitter if you got any questions, one day I’ll have comments in this blog :)</p>
+
+        </section>
+        <footer class="post-footer">
+          <section class="share">
+            
+              
+                <a class="icon-twitter" href="http://twitter.com/share?text=Importing+a+Virtual+Machine+into+AWS&amp;url=//migration/2016/06/04/Migrating-a-Virtual-Machine-to-AWS" onclick="window.open(this.href, 'twitter-share', 'width=550,height=255');return false;">
+                <i class="fa fa-twitter"></i><span class="hidden">twitter</span>
+                </a>
+              
+            
+              
+            
+              
+            
+          </section>
+        </footer>
+        <div class="bottom-teaser cf">
+          <div class="isLeft">
+            <h5 class="index-headline featured"><span>Written by</span></h5>
+            <section class="author">
+              <div class="author-image" style="background-image: url(/assets/images/avatar.png)">Blog Logo</div>
+              <h4>Fernando Battistella</h4>
+              <p class="bio"></p>
+              <hr>
+              <p class="published">Published <time datetime="2016-06-04 10:15">04 Jun 2016</time></p>
+            </section>
+          </div>
+          
+          <div class="isRight">
+            <h5 class="index-headline featured"><span>Supported by</span></h5>
+            <footer class="site-footer">
+              <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> You should subscribe to my feed.</span></a>
+              <div class="inner">
+                <section class="copyright">All content copyright <a href="/">Fernando Battistella</a> © 2016<br>All rights reserved.</section>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </main>
+    <div class="bottom-closer">
+      <div class="background-closer-image" style="background-image: url(/assets/images/banner.jpg)">
+        Image
+      </div>
+      <div class="inner">
+        <h1 class="blog-title">Linuxaria Gourmet</h1>
+        <h2 class="blog-description">...linux, python, cloud computing, cooking, music...
+</h2>
+        <a href="/" class="btn">Back to Overview</a>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="/assets/js/jquery.fitvids.js"></script>
+<script type="text/javascript" src="/assets/js/index.js"></script>
+<script type="text/javascript" src="/assets/js/readingTime.min.js"></script>
+<script>
+(function ($) {
+  "use strict";
+  $(document).ready(function(){
+
+    var $window = $(window),
+    $image = $('.post-image-image, .teaserimage-image');
+    
+      $window.on('scroll', function() {
+        var top = $window.scrollTop();
+
+        if (top < 0 || top > 1500) { return; }
+        $image
+          .css('transform', 'translate3d(0px, '+top/3+'px, 0px)')
+          .css('opacity', 1-Math.max(top/700, 0));
+      });
+      $window.trigger('scroll');
+
+      var height = $('.article-image').height();
+      $('.post-content').css('padding-top', height + 'px');
+
+      $('a[href*=#]:not([href=#])').click(function() {
+        if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'')
+         && location.hostname == this.hostname) {
+          var target = $(this.hash);
+          target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+          if (target.length) {
+            $('html,body').animate({ scrollTop: target.offset().top }, 500);
+            return false;
+          }
+        }
+      });
+
+  });
+}(jQuery));
+</script>
+
+
+  
+
