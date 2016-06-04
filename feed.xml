@@ -4,10 +4,10 @@
     <title>Linuxaria Gourmet</title>
     <description>...linux, python, cloud computing, cooking, music...
 </description>
-    <link>//</link>
-    <atom:link href="//feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Sat, 04 Jun 2016 14:58:10 -0300</pubDate>
-    <lastBuildDate>Sat, 04 Jun 2016 14:58:10 -0300</lastBuildDate>
+    <link>http://www.fernandobattistella.com.br//</link>
+    <atom:link href="http://www.fernandobattistella.com.br//feed.xml" rel="self" type="application/rss+xml" />
+    <pubDate>Sat, 04 Jun 2016 16:58:12 -0300</pubDate>
+    <lastBuildDate>Sat, 04 Jun 2016 16:58:12 -0300</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
@@ -321,8 +321,8 @@ There’s a range of values that will go on the Status field, from preparing, to
 &lt;p&gt;So that’s all, hit me on twitter if you got any questions, one day I’ll have comments in this blog :)&lt;/p&gt;
 </description>
         <pubDate>Sat, 04 Jun 2016 10:15:00 -0300</pubDate>
-        <link>//migration/2016/06/04/Migrating-a-Virtual-Machine-to-AWS.html</link>
-        <guid isPermaLink="true">//migration/2016/06/04/Migrating-a-Virtual-Machine-to-AWS.html</guid>
+        <link>http://www.fernandobattistella.com.br//migration/2016/06/04/Migrating-a-Virtual-Machine-to-AWS.html</link>
+        <guid isPermaLink="true">http://www.fernandobattistella.com.br//migration/2016/06/04/Migrating-a-Virtual-Machine-to-AWS.html</guid>
         
         <category>aws</category>
         
@@ -352,8 +352,8 @@ but I dump so much random stuff in there that I better not use those for referen
 
 </description>
         <pubDate>Sun, 08 May 2016 17:42:00 -0300</pubDate>
-        <link>//tidbits/2016/05/08/Generate-SSH-Public-key-from-private-key.html</link>
-        <guid isPermaLink="true">//tidbits/2016/05/08/Generate-SSH-Public-key-from-private-key.html</guid>
+        <link>http://www.fernandobattistella.com.br//tidbits/2016/05/08/Generate-SSH-Public-key-from-private-key.html</link>
+        <guid isPermaLink="true">http://www.fernandobattistella.com.br//tidbits/2016/05/08/Generate-SSH-Public-key-from-private-key.html</guid>
         
         <category>linux</category>
         
@@ -624,8 +624,8 @@ With this data you could make filters and dashboards showing any actions taken i
 &lt;p&gt;A lot easier than jumping around accounts and consoles looking for stuff ;)&lt;/p&gt;
 </description>
         <pubDate>Sun, 13 Mar 2016 13:11:00 -0300</pubDate>
-        <link>//log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html</link>
-        <guid isPermaLink="true">//log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html</guid>
+        <link>http://www.fernandobattistella.com.br//log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html</link>
+        <guid isPermaLink="true">http://www.fernandobattistella.com.br//log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html</guid>
         
         <category>linux</category>
         
@@ -786,8 +786,8 @@ With this data you could make filters and dashboards showing any actions taken i
 &lt;/blockquote&gt;
 </description>
         <pubDate>Tue, 14 Oct 2014 13:22:14 -0300</pubDate>
-        <link>//log_processing/2014/10/14/mysql-output-in-logstash.html</link>
-        <guid isPermaLink="true">//log_processing/2014/10/14/mysql-output-in-logstash.html</guid>
+        <link>http://www.fernandobattistella.com.br//log_processing/2014/10/14/mysql-output-in-logstash.html</link>
+        <guid isPermaLink="true">http://www.fernandobattistella.com.br//log_processing/2014/10/14/mysql-output-in-logstash.html</guid>
         
         <category>linux</category>
         
@@ -901,8 +901,8 @@ My server is complaining that the charset being sent is different then what was 
 
 </description>
         <pubDate>Fri, 10 Oct 2014 11:05:20 -0300</pubDate>
-        <link>//log_processing/2014/10/10/squid-log-filtering-with-elk-stack.html</link>
-        <guid isPermaLink="true">//log_processing/2014/10/10/squid-log-filtering-with-elk-stack.html</guid>
+        <link>http://www.fernandobattistella.com.br//log_processing/2014/10/10/squid-log-filtering-with-elk-stack.html</link>
+        <guid isPermaLink="true">http://www.fernandobattistella.com.br//log_processing/2014/10/10/squid-log-filtering-with-elk-stack.html</guid>
         
         <category>linux</category>
         
@@ -1265,8 +1265,8 @@ Restart nginx to apply&lt;/p&gt;
 &lt;/blockquote&gt;
 </description>
         <pubDate>Sat, 04 Oct 2014 21:00:00 -0300</pubDate>
-        <link>//log_processing/2014/10/04/ELK-Stack-and-Squid.html</link>
-        <guid isPermaLink="true">//log_processing/2014/10/04/ELK-Stack-and-Squid.html</guid>
+        <link>http://www.fernandobattistella.com.br//log_processing/2014/10/04/ELK-Stack-and-Squid.html</link>
+        <guid isPermaLink="true">http://www.fernandobattistella.com.br//log_processing/2014/10/04/ELK-Stack-and-Squid.html</guid>
         
         <category>linux</category>
         
