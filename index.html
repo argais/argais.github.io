@@ -1,7 +1,7 @@
+<!DOCTYPE html>
+<html>
 
-
-
-  
+  <head>
   <meta charset="utf-8">
   <!-- (1) Optimize for mobile versions: http://goo.gl/EOpFl -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,10 +10,10 @@
 
   <title>Linuxaria Gourmet</title>
   <meta name="description" content="...linux, python, cloud computing, cooking, music...
-">
+" />
 
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="MobileOptimized" content="320" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -24,12 +24,12 @@
   <link rel="stylesheet" href="http://brick.a.ssl.fastly.net/Linux+Libertine:400,400i,700,700i/Open+Sans:400,400i,700,700i">
   <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
 
-  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css">
-  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css">
+  <link rel="stylesheet" type="text/css" media="screen" href="/css/main.css" />
+  <link rel="stylesheet" type="text/css" media="print" href="/css/print.css" />
+</head>
 
 
-
-  
+  <body style="background-image: url('/assets/images/background_pattern.png');">
 
     <!-- header start -->
 
@@ -61,21 +61,21 @@
             <a class="icon-twitter" href="https://twitter.com/Fer_Battistella">
               <i class="fa fa-twitter"></i>
             </a>
-              ·  
+            &nbsp;&nbsp;·&nbsp;&nbsp;
         
       
         
             <a class="icon-github" href="https://github.com/argais">
               <i class="fa fa-github"></i>
             </a>
-              ·  
+            &nbsp;&nbsp;·&nbsp;&nbsp;
         
       
         
             <a class="icon-linkedin" href="https://br.linkedin.com/in/battistella">
               <i class="fa fa-linkedin"></i>
             </a>
-              ·  
+            &nbsp;&nbsp;·&nbsp;&nbsp;
         
       
       <a href="/about/">About</a>
@@ -107,6 +107,26 @@
         <article class="post" itemscope itemtype="http://schema.org/BlogPosting" role="article">
           <div class="article-item">
             <header class="post-header">
+              <h2 class="post-title" itemprop="name"><a href="/aws/2016/06/04/AWS-Policies-Repository.html" itemprop="url">AWS Policies Repository</a></h2>
+            </header>
+            <section class="post-excerpt" itemprop="description">
+              <p>I’ve started documenting some policies I use frequently in AWS.
+
+Surely you have some, so fork the repo and send a pull/merge request.
+
+click here for aws-policies
+</p>
+            </section>
+            <div class="post-meta">
+              <time datetime="04 June 2016">04 June 2016</time>
+<!--            <span class="post-tags-set">on <span class="post-tag-">, <a href="/tag/"></a></span></span>-->
+            </div>
+          </div>
+        </article>
+      
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting" role="article">
+          <div class="article-item">
+            <header class="post-header">
               <h2 class="post-title" itemprop="name"><a href="/tidbits/2016/05/08/Generate-SSH-Public-key-from-private-key.html" itemprop="url">Generate SSH Public Key from Private Key</a></h2>
             </header>
             <section class="post-excerpt" itemprop="description">
@@ -122,7 +142,7 @@
         <article class="post" itemscope itemtype="http://schema.org/BlogPosting" role="article">
           <div class="article-item">
             <header class="post-header">
-              <h2 class="post-title" itemprop="name"><a href="/log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html" itemprop="url">Cloudtrail -&gt; S3 -&gt; Lambda -&gt; Elasticsearch Service</a></h2>
+              <h2 class="post-title" itemprop="name"><a href="/log_processing/2016/03/13/Cloudtrail-S3-Lambda-Elasticsearch.html" itemprop="url">Cloudtrail -> S3 -> Lambda -> Elasticsearch Service</a></h2>
             </header>
             <section class="post-excerpt" itemprop="description">
               <p>Cloudtrail, we all need it, and hey, its fairly easy to check stuff on the console. Now, if you have multiple AWS accounts, it starts to get hairy, nobody wants to keep jumping over account consoles for that right? CLI magic is good, but sometimes, we just want something easy...</p>
@@ -149,26 +169,11 @@
           </div>
         </article>
       
-        <article class="post" itemscope itemtype="http://schema.org/BlogPosting" role="article">
-          <div class="article-item">
-            <header class="post-header">
-              <h2 class="post-title" itemprop="name"><a href="/log_processing/2014/10/10/squid-log-filtering-with-elk-stack.html" itemprop="url">Squid log filtering with ELK stack</a></h2>
-            </header>
-            <section class="post-excerpt" itemprop="description">
-              <p>So now that we have our ELK stack working, lets get squid logs on it! First of all install the logstash forwarder on your server like the previous post instructed you. When you get to editing the forwarder config file ( /etc/logstash-forwarder ) lets change it a bit to: {...</p>
-            </section>
-            <div class="post-meta">
-              <time datetime="10 October 2014">10 October 2014</time>
-<!--            <span class="post-tags-set">on <span class="post-tag-">, <a href="/tag/"></a></span></span>-->
-            </div>
-          </div>
-        </article>
-      
     </div>
 
     <nav class="pagination" role="navigation">
       
-        <a class="newer-posts" href="/page2">← Older posts</a>
+        <a class="newer-posts" href="/page2">&larr; Older posts</a>
       
       <span class="page-number">Page 1 of 2</span>
       
@@ -190,7 +195,7 @@
 <footer class="site-footer">
   <a class="subscribe" href="/feed.xml"> <span class="tooltip"> <i class="fa fa-rss"></i> Subscribe!</span></a>
     <div class="inner">
-         <section class="copyright">All content copyright <a href="mailto:fernando@fernandobattistella.com.br">Fernando Battistella</a> © 2016 • All rights reserved.</section>
+         <section class="copyright">All content copyright <a href="mailto:fernando@fernandobattistella.com.br">Fernando Battistella</a> &copy; 2016 &bull; All rights reserved.</section>
     </div>
 </footer>
 
@@ -239,6 +244,6 @@
 
 
 
-  
+  </body>
 
-
+</html>
