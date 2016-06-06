@@ -6,9 +6,30 @@
 </description>
     <link>http://www.fernandobattistella.com.br/</link>
     <atom:link href="http://www.fernandobattistella.com.br/feed.xml" rel="self" type="application/rss+xml" />
-    <pubDate>Mon, 06 Jun 2016 16:24:33 -0300</pubDate>
-    <lastBuildDate>Mon, 06 Jun 2016 16:24:33 -0300</lastBuildDate>
+    <pubDate>Mon, 06 Jun 2016 16:26:47 -0300</pubDate>
+    <lastBuildDate>Mon, 06 Jun 2016 16:26:47 -0300</lastBuildDate>
     <generator>Jekyll v3.1.6</generator>
+    
+      <item>
+        <title>AWS Policies Repository</title>
+        <description>&lt;p&gt;I’ve started documenting some policies I use frequently in AWS.&lt;/p&gt;
+
+&lt;p&gt;Surely you have some, so fork the repo and send a pull/merge request.&lt;/p&gt;
+
+&lt;h1 id=&quot;click-here-for-aws-policieshttpsgithubcomargaisaws-policies&quot;&gt;&lt;a href=&quot;https://github.com/argais/aws-policies&quot;&gt;click here for aws-policies&lt;/a&gt;&lt;/h1&gt;
+</description>
+        <pubDate>Mon, 06 Jun 2016 13:26:00 -0300</pubDate>
+        <link>http://www.fernandobattistella.com.br/aws/2016/06/06/AWS-Policies-Repository.html</link>
+        <guid isPermaLink="true">http://www.fernandobattistella.com.br/aws/2016/06/06/AWS-Policies-Repository.html</guid>
+        
+        <category>aws</category>
+        
+        <category>policy</category>
+        
+        
+        <category>aws</category>
+        
+      </item>
     
       <item>
         <title>Importing a Virtual Machine into AWS</title>
@@ -336,27 +357,6 @@ There’s a range of values that will go on the Status field, from preparing, to
         
         
         <category>migration</category>
-        
-      </item>
-    
-      <item>
-        <title>AWS Policies Repository</title>
-        <description>&lt;p&gt;I’ve started documenting some policies I use frequently in AWS.&lt;/p&gt;
-
-&lt;p&gt;Surely you have some, so fork the repo and send a pull/merge request.&lt;/p&gt;
-
-&lt;h1 id=&quot;click-here-for-aws-policieshttpsgithubcomargaisaws-policies&quot;&gt;&lt;a href=&quot;https://github.com/argais/aws-policies&quot;&gt;click here for aws-policies&lt;/a&gt;&lt;/h1&gt;
-</description>
-        <pubDate>Sat, 04 Jun 2016 10:15:00 -0300</pubDate>
-        <link>http://www.fernandobattistella.com.br/aws/2016/06/04/AWS-Policies-Repository.html</link>
-        <guid isPermaLink="true">http://www.fernandobattistella.com.br/aws/2016/06/04/AWS-Policies-Repository.html</guid>
-        
-        <category>aws</category>
-        
-        <category>policy</category>
-        
-        
-        <category>aws</category>
         
       </item>
     
