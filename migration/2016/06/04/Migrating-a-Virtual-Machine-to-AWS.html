@@ -140,6 +140,10 @@
 }
 </code></pre>
 
+<p>Attach the policy to the role</p>
+
+<p><code>aws iam put-role-policy --role-name vmimport --policy-name vmimport --policy-document file://role-policy.json</code></p>
+
 <p>Obviously you’re going to change <disk-image-file-bucket> to the name of your bucket, in my case it'll be myimagebucket.</disk-image-file-bucket></p>
 
 <p>This policy allows the vm import service to read from that bucket, and to create us an AMI after doing its importing business.</p>
