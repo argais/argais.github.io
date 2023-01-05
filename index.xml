@@ -5,10 +5,6 @@
     <link>https://www.bearlabs.ca/</link>
     <description>Recent content on Fernando Battistella</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>en-us</language>
-    
-	<atom:link href="https://www.bearlabs.ca/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <language>en-us</language><atom:link href="https://www.bearlabs.ca/index.xml" rel="self" type="application/rss+xml" />
   </channel>
 </rss>
